@@ -200,6 +200,11 @@ export const PoEModeSchema = z.enum(["pd", "pse"]);
 export const InterfacePositionSchema = z.enum(["front", "rear"]);
 
 /**
+ * Port direction enum - signal flow direction for AV and network ports
+ */
+export const PortDirectionSchema = z.enum(["input", "output", "bidirectional"]);
+
+/**
  * Cable type enum (NetBox-compatible)
  */
 export const CableTypeSchema = z.enum([
@@ -317,6 +322,7 @@ export const InterfaceTemplateSchema = z
     position: InterfacePositionSchema.optional(),
     poe_mode: PoEModeSchema.optional(),
     poe_type: PoETypeSchema.optional(),
+    direction: PortDirectionSchema.optional(),
   })
   .passthrough();
 
@@ -395,6 +401,7 @@ export const PlacedPortSchema = z
       .min(0, "Template index must be non-negative"),
     type: InterfaceTypeSchema,
     label: z.string().max(64).optional(),
+    direction: PortDirectionSchema.optional(),
   })
   .passthrough();
 
@@ -1174,6 +1181,7 @@ export type InterfaceType = z.infer<typeof InterfaceTypeSchema>;
 export type PoEType = z.infer<typeof PoETypeSchema>;
 export type PoEMode = z.infer<typeof PoEModeSchema>;
 export type InterfacePosition = z.infer<typeof InterfacePositionSchema>;
+export type PortDirection = z.infer<typeof PortDirectionSchema>;
 export type InterfaceTemplate = z.infer<typeof InterfaceTemplateSchema>;
 export type PowerPort = z.infer<typeof PowerPortSchema>;
 export type PowerOutlet = z.infer<typeof PowerOutletSchema>;

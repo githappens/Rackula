@@ -197,6 +197,14 @@
             "items": {
               "additionalProperties": {},
               "properties": {
+                "direction": {
+                  "enum": [
+                    "input",
+                    "output",
+                    "bidirectional"
+                  ],
+                  "type": "string"
+                },
                 "label": {
                   "maxLength": 64,
                   "type": "string"
@@ -260,6 +268,14 @@
                     "usb-micro-b",
                     "virtual",
                     "lag",
+                    "xlr-3",
+                    "trs-1-4",
+                    "ts-1-4",
+                    "rca",
+                    "adat-optical",
+                    "midi-din",
+                    "bnc",
+                    "db25-audio",
                     "other"
                   ],
                   "type": "string"
@@ -678,6 +694,14 @@
                 "items": {
                   "additionalProperties": {},
                   "properties": {
+                    "direction": {
+                      "enum": [
+                        "input",
+                        "output",
+                        "bidirectional"
+                      ],
+                      "type": "string"
+                    },
                     "id": {
                       "minLength": 1,
                       "type": "string"
@@ -719,6 +743,14 @@
                         "usb-micro-b",
                         "virtual",
                         "lag",
+                        "xlr-3",
+                        "trs-1-4",
+                        "ts-1-4",
+                        "rca",
+                        "adat-optical",
+                        "midi-din",
+                        "bnc",
+                        "db25-audio",
                         "other"
                       ],
                       "type": "string"
@@ -945,6 +977,14 @@
                   "items": {
                     "additionalProperties": {},
                     "properties": {
+                      "direction": {
+                        "enum": [
+                          "input",
+                          "output",
+                          "bidirectional"
+                        ],
+                        "type": "string"
+                      },
                       "id": {
                         "minLength": 1,
                         "type": "string"
@@ -986,6 +1026,14 @@
                           "usb-micro-b",
                           "virtual",
                           "lag",
+                          "xlr-3",
+                          "trs-1-4",
+                          "ts-1-4",
+                          "rca",
+                          "adat-optical",
+                          "midi-din",
+                          "bnc",
+                          "db25-audio",
                           "other"
                         ],
                         "type": "string"

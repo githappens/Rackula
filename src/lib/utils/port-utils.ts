@@ -3,7 +3,7 @@
  * Functions for port instantiation when devices are placed
  */
 
-import type { DeviceType, PlacedPort } from "$lib/types";
+import type { DeviceType, InterfaceType, PlacedPort, PortDirection } from "$lib/types";
 import { generateId } from "$lib/utils/device";
 
 export type PortCategory = "network" | "power" | "console" | "av";
@@ -45,6 +45,22 @@ export function getPortCategory(type: string): PortCategory {
 }
 
 /**
+ * Infer the signal flow direction for a port.
+ * Returns undefined for AV types because direction must be explicitly set on those.
+ * Returns "input" for management-only ports and console ports.
+ * Returns "bidirectional" for all other types (network, USB, etc.).
+ */
+export function inferDirection(
+  type: InterfaceType,
+  mgmtOnly?: boolean,
+): PortDirection | undefined {
+  if (mgmtOnly) return "input";
+  if (type === "console") return "input";
+  if (AV_INTERFACE_TYPES.has(type)) return undefined; // AV needs explicit direction
+  return "bidirectional";
+}
+
+/**
  * Instantiate ports from a DeviceType's interface templates
  * Creates PlacedPort instances with stable UUIDs for each interface
  *
@@ -61,5 +77,6 @@ export function instantiatePorts(deviceType: DeviceType): PlacedPort[] {
     template_name: iface.name,
     template_index: index,
     type: iface.type,
+    direction: iface.direction ?? inferDirection(iface.type, iface.mgmt_only),
   }));
 }

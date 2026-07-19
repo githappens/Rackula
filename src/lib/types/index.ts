@@ -12,6 +12,9 @@
  */
 export type RackView = "front" | "rear";
 
+/** Signal flow direction of a port (AV; network defaults to bidirectional) */
+export type PortDirection = "input" | "output" | "bidirectional";
+
 /**
  * Metadata for layout persistence and export
  * @see docs/plans/2026-01-22-data-directory-refactor-design.md
@@ -255,6 +258,8 @@ export interface InterfaceTemplate {
   poe_mode?: PoEMode;
   /** PoE type/standard */
   poe_type?: PoEType;
+  /** Signal flow direction; required for AV types, inferred for network types */
+  direction?: PortDirection;
 }
 
 /**
@@ -374,6 +379,8 @@ export interface PlacedPort {
   type: InterfaceType;
   /** User override label for this port instance */
   label?: string;
+  /** Resolved signal flow direction (copied from template or inferred) */
+  direction?: PortDirection;
 }
 
 // =============================================================================

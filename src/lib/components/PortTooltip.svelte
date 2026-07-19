@@ -63,6 +63,9 @@
   <div class="port-tooltip" role="tooltip" style="left: {x}px; top: {y}px;">
     <div class="port-tooltip-name">{port.label ?? port.name}</div>
     <div class="port-tooltip-type">{getTypeLabel(port.type)}</div>
+    {#if port.direction}
+      <div class="port-tooltip-type">{port.direction === "input" ? "Input" : port.direction === "output" ? "Output" : "Bidirectional"}</div>
+    {/if}
     {#if port.mgmt_only}
       <div class="port-tooltip-badge mgmt">Management Only</div>
     {/if}
