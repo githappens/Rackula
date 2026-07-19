@@ -204,6 +204,26 @@ export const InterfacePositionSchema = z.enum(["front", "rear"]);
  */
 export const PortDirectionSchema = z.enum(["input", "output", "bidirectional"]);
 
+/**
+ * Signal type enum - what a port/cable carries, independent of the connector.
+ * Enum-validated on import so only known values survive (no arbitrary strings).
+ */
+export const SignalTypeSchema = z.enum([
+  "ethernet",
+  "power-ac",
+  "analog-audio-mic",
+  "analog-audio-line",
+  "analog-audio-speaker",
+  "digital-audio-aes3",
+  "digital-video-hdmi",
+  "digital-video-sdi",
+  "control-midi",
+  "data-usb",
+  "digital-audio-adat",
+  "digital-audio-spdif",
+  "clock-word",
+]);
+
 
 // ============================================================================
 // Container Slot Schemas (v0.6.0)
@@ -285,6 +305,7 @@ export const InterfaceTemplateSchema = z
     poe_mode: PoEModeSchema.optional(),
     poe_type: PoETypeSchema.optional(),
     direction: PortDirectionSchema.optional(),
+    signal_type: SignalTypeSchema.optional(),
   })
   .passthrough();
 
@@ -364,6 +385,7 @@ export const PlacedPortSchema = z
     type: InterfaceTypeSchema,
     label: z.string().max(64).optional(),
     direction: PortDirectionSchema.optional(),
+    signal_type: SignalTypeSchema.optional(),
   })
   .passthrough();
 
@@ -388,6 +410,7 @@ export const ConnectionSchema = z
         "Color must be a valid hex color (e.g., #FF5500)",
       )
       .optional(),
+    signal_type: SignalTypeSchema.optional(),
   })
   .passthrough()
   .refine((data) => data.a_port_id !== data.b_port_id, {
@@ -1093,6 +1116,7 @@ export type PoEType = z.infer<typeof PoETypeSchema>;
 export type PoEMode = z.infer<typeof PoEModeSchema>;
 export type InterfacePosition = z.infer<typeof InterfacePositionSchema>;
 export type PortDirection = z.infer<typeof PortDirectionSchema>;
+export type SignalType = z.infer<typeof SignalTypeSchema>;
 export type InterfaceTemplate = z.infer<typeof InterfaceTemplateSchema>;
 export type PowerPort = z.infer<typeof PowerPortSchema>;
 export type PowerOutlet = z.infer<typeof PowerOutletSchema>;

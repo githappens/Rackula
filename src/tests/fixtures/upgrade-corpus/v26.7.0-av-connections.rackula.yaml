@@ -30,6 +30,7 @@ racks:
             template_index: 0
             type: xlr-3
             direction: output
+            signal_type: analog-audio-line
           - id: port-pre-out-r
             template_name: Out R
             template_index: 1
@@ -61,6 +62,7 @@ device_types:
       - name: Out L
         type: xlr-3
         direction: output
+        signal_type: analog-audio-line
       - name: Out R
         type: xlr-3
         direction: output
@@ -89,6 +91,7 @@ connections:
     a_port_id: port-pre-out-r
     b_port_id: port-comp-in-2
     label: Right
+    signal_type: analog-audio-line
 cables:
   - id: legacy-cable-1
     a_device_id: dev-preamp

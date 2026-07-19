@@ -17,6 +17,7 @@
   import { getConnectionStore } from "$lib/stores/connection.svelte";
   import { getLayoutStore } from "$lib/stores/layout.svelte";
   import { getPortAnchor, type Point } from "$lib/utils/connection-geometry";
+  import { getConnectionSignalType } from "$lib/utils/port-utils";
   import { getInteriorWidth } from "$lib/constants/layout";
   import { toHumanUnits } from "$lib/utils/position";
   import ConnectionPath from "./ConnectionPath.svelte";
@@ -51,6 +52,7 @@
   interface Endpoint {
     anchor: Point;
     direction: PlacedPort["direction"];
+    port: PlacedPort;
   }
 
   /**
@@ -101,7 +103,7 @@
       portCount,
     });
 
-    return { anchor, direction: resolved.port.direction };
+    return { anchor, direction: resolved.port.direction, port: resolved.port };
   }
 
   // Resolve every connection to a drawable pair; overlapping connections get a
@@ -112,20 +114,22 @@
         const a = resolveEndpoint(connection.a_port_id);
         const b = resolveEndpoint(connection.b_port_id);
         if (!a || !b) return null;
-        return { connection, a, b, lane: index };
+        const signalType = getConnectionSignalType(connection, a.port, b.port);
+        return { connection, a, b, lane: index, signalType };
       })
       .filter((entry) => entry !== null);
   });
 </script>
 
 <g class="connection-layer">
-  {#each drawn as { connection, a, b, lane } (connection.id)}
+  {#each drawn as { connection, a, b, lane, signalType } (connection.id)}
     <ConnectionPath
       {connection}
       aAnchor={a.anchor}
       bAnchor={b.anchor}
       aDirection={a.direction}
       bDirection={b.direction}
+      {signalType}
       {channelX}
       {lane}
       highlighted={connectionStore.hoveredConnectionId === connection.id}

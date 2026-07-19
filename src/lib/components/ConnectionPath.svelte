@@ -12,7 +12,7 @@
   records the hovered connection id in the connection store (Task 10 reads it).
 -->
 <script lang="ts">
-  import type { Connection, PortDirection } from "$lib/types";
+  import type { Connection, PortDirection, SignalType } from "$lib/types";
   import {
     buildConnectionPath,
     connectionMidpoint,
@@ -28,6 +28,8 @@
     aDirection?: PortDirection;
     /** Direction of the B-side port (drives the arrow). */
     bDirection?: PortDirection;
+    /** Effective signal this cable carries (drives the family colour). */
+    signalType?: SignalType;
     channelX: number;
     /** Per-connection routing lane, to separate overlapping cables. */
     lane?: number;
@@ -40,6 +42,7 @@
     bAnchor,
     aDirection,
     bDirection,
+    signalType,
     channelX,
     lane = 0,
     highlighted = false,
@@ -47,7 +50,26 @@
 
   const connectionStore = getConnectionStore();
 
-  const stroke = $derived(connection.color ?? "var(--colour-port-default)");
+  // Map a signal type to its family colour token. Analog audio, digital audio,
+  // and video collapse to one token per family; midi/clock/data/ethernet get
+  // their own; anything else falls to "other".
+  function signalColour(signal: SignalType): string {
+    if (signal.startsWith("analog-audio")) return "var(--colour-signal-analog)";
+    if (signal.startsWith("digital-audio"))
+      return "var(--colour-signal-digital-audio)";
+    if (signal.startsWith("digital-video")) return "var(--colour-signal-video)";
+    if (signal === "control-midi") return "var(--colour-signal-midi)";
+    if (signal === "clock-word") return "var(--colour-signal-clock)";
+    if (signal === "data-usb" || signal === "ethernet")
+      return "var(--colour-signal-data)";
+    return "var(--colour-signal-other)";
+  }
+
+  // Colour precedence: explicit user colour -> signal-family token -> default.
+  const stroke = $derived(
+    connection.color ??
+      (signalType ? signalColour(signalType) : "var(--colour-port-default)"),
+  );
 
   const d = $derived(
     buildConnectionPath(aAnchor, bAnchor, { channelX, lane }),

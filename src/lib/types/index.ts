@@ -172,6 +172,26 @@ export type InterfaceType =
   | "other"; // Catch-all for unlisted types
 
 /**
+ * Signal type carried by a port/cable, independent of the physical connector.
+ * The connector (InterfaceType) describes the plug; the signal type describes
+ * what flows through it (e.g. an XLR can carry mic, line, or AES3).
+ */
+export type SignalType =
+  | "ethernet"
+  | "power-ac"
+  | "analog-audio-mic"
+  | "analog-audio-line"
+  | "analog-audio-speaker"
+  | "digital-audio-aes3"
+  | "digital-video-hdmi"
+  | "digital-video-sdi"
+  | "control-midi"
+  | "data-usb"
+  | "digital-audio-adat"
+  | "digital-audio-spdif"
+  | "clock-word";
+
+/**
  * PoE type (NetBox-compatible)
  * Power over Ethernet standards
  */
@@ -225,6 +245,8 @@ export interface InterfaceTemplate {
   poe_type?: PoEType;
   /** Signal flow direction; required for AV types, inferred for network types */
   direction?: PortDirection;
+  /** Signal carried by this port (explicit override; inferred at read time if absent) */
+  signal_type?: SignalType;
 }
 
 /**
@@ -346,6 +368,8 @@ export interface PlacedPort {
   label?: string;
   /** Resolved signal flow direction (copied from template or inferred) */
   direction?: PortDirection;
+  /** Signal carried by this port (explicit override; inferred at read time if absent) */
+  signal_type?: SignalType;
 }
 
 // =============================================================================
@@ -368,6 +392,8 @@ export interface Connection {
   label?: string;
   /** Optional color for visualization (hex, e.g., '#FF5500') */
   color?: string;
+  /** Optional signal-type override for this specific cable (labels without editing ports) */
+  signal_type?: SignalType;
 }
 
 // =============================================================================

@@ -4,8 +4,9 @@
   Renders at the document level, positioned using fixed coordinates.
 -->
 <script lang="ts">
-  import type { InterfaceType } from "$lib/types";
+  import type { InterfaceType, SignalType } from "$lib/types";
   import { getPortTooltipState } from "$lib/stores/portTooltip.svelte";
+  import { inferSignalType } from "$lib/utils/port-utils";
 
   // Get reactive tooltip state from store
   const tooltipState = $derived(getPortTooltipState());
@@ -35,10 +36,40 @@
     "db25-audio": "DB25 (TASCAM)",
   };
 
+  // Human-readable signal names, one per SignalType value.
+  const SIGNAL_LABELS: Record<SignalType, string> = {
+    ethernet: "Ethernet",
+    "power-ac": "AC power",
+    "analog-audio-mic": "Mic level",
+    "analog-audio-line": "Line level",
+    "analog-audio-speaker": "Speaker level",
+    "digital-audio-aes3": "AES3",
+    "digital-video-hdmi": "HDMI",
+    "digital-video-sdi": "SDI",
+    "control-midi": "MIDI",
+    "data-usb": "USB data",
+    "digital-audio-adat": "ADAT",
+    "digital-audio-spdif": "S/PDIF",
+    "clock-word": "Word clock",
+  };
+
   // Get human-readable type label
   function getTypeLabel(type: InterfaceType): string {
     return TYPE_LABELS[type] ?? type;
   }
+
+  function getSignalLabel(signal: SignalType): string {
+    return SIGNAL_LABELS[signal] ?? signal;
+  }
+
+  // Explicit signal takes precedence; otherwise fall back to inference from the
+  // template's type+direction (rendered as "inferred: X" in italics).
+  const explicitSignal = $derived(port?.signal_type);
+  const inferredSignal = $derived(
+    !explicitSignal && port
+      ? inferSignalType(port.type, port.direction)
+      : undefined,
+  );
 
   // Get PoE label
   function getPoELabel(
@@ -65,6 +96,13 @@
     <div class="port-tooltip-type">{getTypeLabel(port.type)}</div>
     {#if port.direction}
       <div class="port-tooltip-type">{port.direction === "input" ? "Input" : port.direction === "output" ? "Output" : "Bidirectional"}</div>
+    {/if}
+    {#if explicitSignal}
+      <div class="port-tooltip-type">{getSignalLabel(explicitSignal)}</div>
+    {:else if inferredSignal}
+      <div class="port-tooltip-type port-tooltip-inferred">
+        inferred: {getSignalLabel(inferredSignal)}
+      </div>
     {/if}
     {#if port.mgmt_only}
       <div class="port-tooltip-badge mgmt">Management Only</div>
@@ -119,6 +157,10 @@
   .port-tooltip-type {
     color: var(--colour-text-muted-inverse, rgba(255, 255, 255, 0.7));
     font-size: var(--font-size-xs);
+  }
+
+  .port-tooltip-inferred {
+    font-style: italic;
   }
 
   .port-tooltip-badge {

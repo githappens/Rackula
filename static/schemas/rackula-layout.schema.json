@@ -27,6 +27,24 @@
           "label": {
             "maxLength": 100,
             "type": "string"
+          },
+          "signal_type": {
+            "enum": [
+              "ethernet",
+              "power-ac",
+              "analog-audio-mic",
+              "analog-audio-line",
+              "analog-audio-speaker",
+              "digital-audio-aes3",
+              "digital-video-hdmi",
+              "digital-video-sdi",
+              "control-midi",
+              "data-usb",
+              "digital-audio-adat",
+              "digital-audio-spdif",
+              "clock-word"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -158,6 +176,24 @@
                   "enum": [
                     "front",
                     "rear"
+                  ],
+                  "type": "string"
+                },
+                "signal_type": {
+                  "enum": [
+                    "ethernet",
+                    "power-ac",
+                    "analog-audio-mic",
+                    "analog-audio-line",
+                    "analog-audio-speaker",
+                    "digital-audio-aes3",
+                    "digital-video-hdmi",
+                    "digital-video-sdi",
+                    "control-midi",
+                    "data-usb",
+                    "digital-audio-adat",
+                    "digital-audio-spdif",
+                    "clock-word"
                   ],
                   "type": "string"
                 },
@@ -627,6 +663,24 @@
                       "maxLength": 64,
                       "type": "string"
                     },
+                    "signal_type": {
+                      "enum": [
+                        "ethernet",
+                        "power-ac",
+                        "analog-audio-mic",
+                        "analog-audio-line",
+                        "analog-audio-speaker",
+                        "digital-audio-aes3",
+                        "digital-video-hdmi",
+                        "digital-video-sdi",
+                        "control-midi",
+                        "data-usb",
+                        "digital-audio-adat",
+                        "digital-audio-spdif",
+                        "clock-word"
+                      ],
+                      "type": "string"
+                    },
                     "template_index": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -908,6 +962,24 @@
                       },
                       "label": {
                         "maxLength": 64,
+                        "type": "string"
+                      },
+                      "signal_type": {
+                        "enum": [
+                          "ethernet",
+                          "power-ac",
+                          "analog-audio-mic",
+                          "analog-audio-line",
+                          "analog-audio-speaker",
+                          "digital-audio-aes3",
+                          "digital-video-hdmi",
+                          "digital-video-sdi",
+                          "control-midi",
+                          "data-usb",
+                          "digital-audio-adat",
+                          "digital-audio-spdif",
+                          "clock-word"
+                        ],
                         "type": "string"
                       },
                       "template_index": {

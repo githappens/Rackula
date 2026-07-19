@@ -7,9 +7,9 @@
  * validation rules for creating connections.
  */
 
-import type { Connection, PlacedPort } from "$lib/types";
+import type { Connection, PlacedPort, SignalType } from "$lib/types";
 import { generateId } from "$lib/utils/device";
-import { getPortCategory } from "$lib/utils/port-utils";
+import { getPortCategory, inferSignalType } from "$lib/utils/port-utils";
 import { getLayoutStore } from "./layout.svelte";
 
 /**
@@ -20,6 +20,7 @@ export interface CreateConnectionInput {
   b_port_id: string;
   label?: string;
   color?: string;
+  signal_type?: SignalType;
 }
 
 /**
@@ -92,6 +93,17 @@ export function validateConnection(
       warnings.push(
         `Connecting ${a.port.type} to ${b.port.type} (different categories)`,
       );
+    }
+
+    // Effective signal per side: explicit port value, else inference. Warn-only
+    // when both are known and differ; never blocks (connectors can legitimately
+    // carry different signals, and the user may still want the cable).
+    const aSignal =
+      a.port.signal_type ?? inferSignalType(a.port.type, a.port.direction);
+    const bSignal =
+      b.port.signal_type ?? inferSignalType(b.port.type, b.port.direction);
+    if (aSignal && bSignal && aSignal !== bSignal) {
+      warnings.push(`Signal mismatch: ${aSignal} to ${bSignal}`);
     }
   }
 
@@ -176,6 +188,9 @@ export function getConnectionStore() {
       b_port_id: input.b_port_id,
       ...(input.label !== undefined ? { label: input.label } : {}),
       ...(input.color !== undefined ? { color: input.color } : {}),
+      ...(input.signal_type !== undefined
+        ? { signal_type: input.signal_type }
+        : {}),
     };
 
     layoutStore.addConnectionRaw(connection);

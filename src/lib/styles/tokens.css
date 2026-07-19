@@ -270,6 +270,15 @@
   --colour-port-power: var(--dracula-orange);
   --colour-port-default: var(--neutral-500);
   --colour-port-stroke: rgba(0, 0, 0, 0.3);
+
+  /* Signal families - cable colours by what the cable carries */
+  --colour-signal-analog: var(--emerald-500); /* analog-audio-* */
+  --colour-signal-digital-audio: var(--dracula-cyan); /* digital-audio-* */
+  --colour-signal-video: var(--dracula-purple); /* digital-video-* */
+  --colour-signal-midi: var(--dracula-pink); /* control-midi */
+  --colour-signal-clock: var(--dracula-yellow); /* clock-word */
+  --colour-signal-data: var(--blue-500); /* data-usb, ethernet */
+  --colour-signal-other: var(--neutral-400);
   --colour-port-indicator: white;
   --colour-port-hover: rgba(255, 255, 255, 0.2);
   --shadow-port-text: 0 0.5px 1px rgba(0, 0, 0, 0.5);

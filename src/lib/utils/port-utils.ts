@@ -3,7 +3,14 @@
  * Functions for port instantiation when devices are placed
  */
 
-import type { DeviceType, InterfaceType, PlacedPort, PortDirection } from "$lib/types";
+import type {
+  Connection,
+  DeviceType,
+  InterfaceType,
+  PlacedPort,
+  PortDirection,
+  SignalType,
+} from "$lib/types";
 import { generateId } from "$lib/utils/device";
 
 export type PortCategory = "network" | "power" | "console" | "av";
@@ -61,6 +68,60 @@ export function inferDirection(
 }
 
 /**
+ * Infer the signal a connector carries from its type (and, for XLR, direction).
+ * Returns undefined for connectors whose signal is not stored (network types:
+ * ethernet is implied by the connector, not a distinct signal to label).
+ */
+export function inferSignalType(
+  type: InterfaceType,
+  direction?: PortDirection,
+): SignalType | undefined {
+  switch (type) {
+    case "xlr-3":
+      return direction === "input" ? "analog-audio-mic" : "analog-audio-line";
+    case "trs-1-4":
+    case "ts-1-4":
+    case "rca":
+    case "db25-audio":
+      return "analog-audio-line";
+    case "adat-optical":
+      return "digital-audio-adat";
+    case "midi-din":
+      return "control-midi";
+    case "bnc":
+      return "clock-word";
+    case "usb-a":
+    case "usb-b":
+    case "usb-c":
+    case "usb-mini-b":
+    case "usb-micro-b":
+      return "data-usb";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Effective signal of a cable: connection override -> explicit port value ->
+ * inference. The connection override wins so a specific cable can be labelled
+ * without editing either port; explicit port values beat inference so an
+ * overridden port is authoritative; inference is the last-resort fallback,
+ * a-side first.
+ */
+export function getConnectionSignalType(
+  connection: Connection,
+  a: PlacedPort | undefined,
+  b: PlacedPort | undefined,
+): SignalType | undefined {
+  if (connection.signal_type) return connection.signal_type;
+  if (a?.signal_type) return a.signal_type;
+  if (b?.signal_type) return b.signal_type;
+  const inferredA = a ? inferSignalType(a.type, a.direction) : undefined;
+  if (inferredA) return inferredA;
+  return b ? inferSignalType(b.type, b.direction) : undefined;
+}
+
+/**
  * Instantiate ports from a DeviceType's interface templates
  * Creates PlacedPort instances with stable UUIDs for each interface
  *
@@ -78,5 +139,10 @@ export function instantiatePorts(deviceType: DeviceType): PlacedPort[] {
     template_index: index,
     type: iface.type,
     direction: iface.direction ?? inferDirection(iface.type, iface.mgmt_only),
+    // Copy explicit template values only; inferred signals are computed at read
+    // time so a later direction edit stays consistent.
+    ...(iface.signal_type !== undefined
+      ? { signal_type: iface.signal_type }
+      : {}),
   }));
 }
