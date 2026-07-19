@@ -196,6 +196,115 @@ const STARTER_DEVICES: StarterDeviceSpec[] = [
     category: "av-media",
   },
 
+  // Pro audio (4)
+  {
+    slug: "audio-interface",
+    model: "Audio Interface",
+    u_height: 1,
+    category: "av-media",
+    interfaces: [
+      ...[1, 2, 3, 4].map((n) => ({
+        name: `Mic/Line ${n}`,
+        type: "xlr-3" as const,
+        direction: "input" as const,
+      })),
+      {
+        name: "Main Out L",
+        type: "trs-1-4" as const,
+        direction: "output" as const,
+      },
+      {
+        name: "Main Out R",
+        type: "trs-1-4" as const,
+        direction: "output" as const,
+      },
+      {
+        name: "ADAT In",
+        type: "adat-optical" as const,
+        direction: "input" as const,
+      },
+      {
+        name: "ADAT Out",
+        type: "adat-optical" as const,
+        direction: "output" as const,
+      },
+      {
+        name: "Word Clock Out",
+        type: "bnc" as const,
+        direction: "output" as const,
+      },
+      {
+        name: "MIDI In",
+        type: "midi-din" as const,
+        direction: "input" as const,
+      },
+      {
+        name: "MIDI Out",
+        type: "midi-din" as const,
+        direction: "output" as const,
+      },
+    ],
+  },
+  {
+    slug: "mic-preamp",
+    model: "Mic Preamp (2ch)",
+    u_height: 1,
+    category: "av-media",
+    interfaces: [
+      { name: "Mic In 1", type: "xlr-3" as const, direction: "input" as const },
+      { name: "Mic In 2", type: "xlr-3" as const, direction: "input" as const },
+      {
+        name: "Line Out 1",
+        type: "xlr-3" as const,
+        direction: "output" as const,
+      },
+      {
+        name: "Line Out 2",
+        type: "xlr-3" as const,
+        direction: "output" as const,
+      },
+    ],
+  },
+  {
+    slug: "compressor",
+    model: "Compressor (2ch)",
+    u_height: 1,
+    category: "av-media",
+    interfaces: [
+      {
+        name: "In 1",
+        type: "trs-1-4" as const,
+        direction: "input" as const,
+      },
+      {
+        name: "In 2",
+        type: "trs-1-4" as const,
+        direction: "input" as const,
+      },
+      {
+        name: "Out 1",
+        type: "trs-1-4" as const,
+        direction: "output" as const,
+      },
+      {
+        name: "Out 2",
+        type: "trs-1-4" as const,
+        direction: "output" as const,
+      },
+    ],
+  },
+  {
+    slug: "patchbay-48",
+    model: "Patchbay (48pt)",
+    u_height: 1,
+    category: "av-media",
+    interfaces: Array.from({ length: 48 }, (_, i) => ({
+      name: String(i + 1),
+      type: "trs-1-4" as const,
+      direction: "bidirectional" as const,
+    })),
+  },
+
   // Cooling (2)
   {
     slug: "1u-fan-panel",
