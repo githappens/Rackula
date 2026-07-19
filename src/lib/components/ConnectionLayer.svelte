@@ -16,6 +16,8 @@
   import type { PlacedPort, RackView } from "$lib/types";
   import { getConnectionStore } from "$lib/stores/connection.svelte";
   import { getLayoutStore } from "$lib/stores/layout.svelte";
+  import { getConnectionFilterStore } from "$lib/stores/connection-filters.svelte";
+  import { visibleConnectionIdsForRack } from "$lib/utils/connection-rows";
   import { getPortAnchor, type Point } from "$lib/utils/connection-geometry";
   import { getConnectionSignalType } from "$lib/utils/port-utils";
   import { getInteriorWidth } from "$lib/constants/layout";
@@ -41,6 +43,7 @@
 
   const connectionStore = getConnectionStore();
   const layoutStore = getLayoutStore();
+  const filterStore = getConnectionFilterStore();
 
   // Vertical channel just outside the rail on the right edge; cables route
   // through it. Small offset keeps the curve clear of the frame.
@@ -108,9 +111,18 @@
 
   // Resolve every connection to a drawable pair; overlapping connections get a
   // distinct lane so their channel routes do not coincide.
+  // The filter store is read here so the derived recomputes when filters change.
   const drawn = $derived.by(() => {
+    const visibleIds = visibleConnectionIdsForRack(
+      connectionStore.connections,
+      layoutStore.layout.racks,
+      layoutStore.device_types,
+      filterStore.state,
+      rackId,
+    );
     return connectionStore.connections
       .map((connection, index) => {
+        if (!visibleIds.has(connection.id)) return null;
         const a = resolveEndpoint(connection.a_port_id);
         const b = resolveEndpoint(connection.b_port_id);
         if (!a || !b) return null;

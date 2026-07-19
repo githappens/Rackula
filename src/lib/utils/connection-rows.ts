@@ -15,6 +15,10 @@ import type {
   SignalType,
 } from "$lib/types";
 import { getConnectionSignalType } from "$lib/utils/port-utils";
+import {
+  filterConnections,
+  type ConnectionFilterState,
+} from "$lib/stores/connection-filters.svelte";
 
 /**
  * One resolved endpoint of a connection.
@@ -118,4 +122,46 @@ export function buildConnectionRows(
       rackId: a?.rackId ?? "",
     };
   });
+}
+
+/**
+ * Compute the set of connection ids that the cable overlay should draw for a
+ * given rack. A connection is included when ALL of the following hold:
+ *
+ * 1. The active `filterState` does not exclude it (uses `filterConnections`,
+ *    the same function the Connections panel uses, so overlay and panel agree).
+ * 2. The a-side device lives in `rackId` — same-rack constraint for the
+ *    overlay (multi-rack routing is out of scope for now).
+ *
+ * Unresolved connections (unknown ports) are NEVER hidden — they pass through
+ * `filterConnections` unchanged and are included in the result regardless of
+ * filter state, so the overlay renders the broken-cable indicator.
+ *
+ * Pure: reads only its arguments; safe to call inside a `$derived`.
+ */
+export function visibleConnectionIdsForRack(
+  connections: readonly Connection[],
+  racks: readonly Rack[],
+  deviceTypes: readonly DeviceType[],
+  filterState: ConnectionFilterState,
+  rackId: string,
+): ReadonlySet<string> {
+  const rows = buildConnectionRows(connections, racks, deviceTypes);
+  const passing = filterConnections(rows, filterState);
+  // Build the passing-id set once, then intersect with the rack constraint.
+  const passingIds = new Set(passing.map((r) => r.id));
+
+  // A connection belongs to this rack when its a-side device is here.
+  // Unresolved rows have rackId === "" — they pass the filter regardless, so
+  // include them when they originate from a port in this rack (best-effort:
+  // if both ports are missing, rackId is "" and we include them anyway so
+  // the broken-cable indicator remains visible).
+  const result = new Set<string>();
+  for (const row of rows) {
+    if (!passingIds.has(row.id)) continue;
+    if (row.rackId === rackId || row.rackId === "") {
+      result.add(row.id);
+    }
+  }
+  return result;
 }
