@@ -19,7 +19,7 @@ const FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r", "\n"]);
  * - Wraps in quotes if contains comma, quote, newline, or carriage return
  * - Doubles any existing quotes
  */
-function escapeCSVField(value: string): string {
+export function escapeCSVField(value: string): string {
   const sanitized = FORMULA_TRIGGERS.has(value.charAt(0)) ? `'${value}` : value;
   if (
     sanitized.includes(",") ||

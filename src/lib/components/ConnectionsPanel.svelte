@@ -18,6 +18,8 @@
   } from "$lib/stores/connection-filters.svelte";
   import { buildConnectionRows } from "$lib/utils/connection-rows";
   import { SIGNAL_LABELS, getSignalLabel } from "$lib/utils/port-utils";
+  import { buildPatchListCsv } from "$lib/utils/export/patch-list";
+  import { downloadBlob } from "$lib/utils/export/utils";
 
   const layoutStore = getLayoutStore();
   const connectionStore = getConnectionStore();
@@ -66,6 +68,23 @@
     connectionStore.setHoveredConnection(null);
     layoutStore.removeConnectionRecorded(id);
   }
+
+  function exportCsv() {
+    const rows = visibleRows
+      .filter((r) => r.resolved)
+      .map((r) => ({
+        aDevice: r.aDeviceName,
+        aPort: r.a?.portLabel ?? "",
+        bDevice: r.bDeviceName,
+        bPort: r.b?.portLabel ?? "",
+        type: r.a?.portType ?? "",
+        signal: r.signal_type ?? "",
+        label: r.label,
+      }));
+    const csv = buildPatchListCsv(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    downloadBlob(blob, "patch-list.csv");
+  }
 </script>
 
 <div class="connections-panel" data-testid="connections-panel">
@@ -109,6 +128,15 @@
         </button>
       {/each}
     </div>
+
+    <button
+      type="button"
+      class="export-btn"
+      onclick={exportCsv}
+      disabled={visibleRows.filter((r) => r.resolved).length === 0}
+    >
+      Export CSV
+    </button>
   </div>
 
   {#if visibleRows.length === 0}
@@ -326,6 +354,27 @@
 
   .delete-btn:hover {
     background: color-mix(in srgb, var(--colour-danger, #d33) 12%, transparent);
+  }
+
+  .export-btn {
+    align-self: flex-start;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-size-xs);
+    color: var(--colour-text-muted);
+    background: transparent;
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .export-btn:hover:not(:disabled) {
+    background: var(--colour-surface-hover);
+    color: var(--colour-text);
+  }
+
+  .export-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .sr-only {
