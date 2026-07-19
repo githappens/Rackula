@@ -6,7 +6,7 @@
  * wrapping raw mutators, then executes it through the history system.
  */
 
-import type { Cable, DeviceType, PlacedDevice } from "$lib/types";
+import type { DeviceType } from "$lib/types";
 import {
   createDeviceType as createDeviceTypeHelper,
   findDeviceType as findDeviceTypeInArray,
@@ -74,25 +74,6 @@ export function updateDeviceTypeRecorded(
 }
 
 /**
- * Find cables connected to any of the given placed devices.
- * Used so DELETE_DEVICE_TYPE (#1483) and REMOVE_DEVICE (#2924) can clean up
- * dangling cable endpoints.
- */
-export function findCablesForDevices(
-  ctx: LayoutStateAccess,
-  placedDevices: { rackId: string; device: PlacedDevice }[],
-): Cable[] {
-  const layout = ctx.getLayout();
-  const cables = layout.cables;
-  if (!cables || cables.length === 0) return [];
-  const deviceIds = new Set(placedDevices.map((p) => p.device.id));
-  if (deviceIds.size === 0) return [];
-  return cables.filter(
-    (c) => deviceIds.has(c.a_device_id) || deviceIds.has(c.b_device_id),
-  );
-}
-
-/**
  * Delete a device type with undo/redo support
  * @param ctx - Layout state access
  * @param slug - Device type slug
@@ -106,7 +87,6 @@ export function deleteDeviceTypeRecorded(
   if (!existing) return;
 
   const placedDevices = getPlacedDevicesWithRackForType(ctx, slug);
-  const connectedCables = findCablesForDevices(ctx, placedDevices);
   const history = ctx.getHistory();
   const adapter = getCommandStoreAdapter(ctx);
 
@@ -114,7 +94,6 @@ export function deleteDeviceTypeRecorded(
     existing,
     placedDevices,
     adapter,
-    connectedCables,
     layout.metadata?.id ?? "",
   );
   history.execute(command);
@@ -148,27 +127,16 @@ export function deleteMultipleDeviceTypesRecorded(
   const history = ctx.getHistory();
   const adapter = getCommandStoreAdapter(ctx);
   const commands: ReturnType<typeof createDeleteDeviceTypeCommand>[] = [];
-  // A cable connecting devices of two different types would otherwise be
-  // snapshotted by both per-type delete commands, restoring it twice on undo.
-  const claimedCableIds = new Set<string>();
 
   for (const slug of slugs) {
     const existing = findDeviceTypeInArray(layout.device_types, slug);
     if (!existing) continue;
 
     const placedDevices = getPlacedDevicesWithRackForType(ctx, slug);
-    const connectedCables = findCablesForDevices(ctx, placedDevices).filter(
-      (cable) => {
-        if (claimedCableIds.has(cable.id)) return false;
-        claimedCableIds.add(cable.id);
-        return true;
-      },
-    );
     const command = createDeleteDeviceTypeCommand(
       existing,
       placedDevices,
       adapter,
-      connectedCables,
       layout.metadata?.id ?? "",
     );
     commands.push(command);

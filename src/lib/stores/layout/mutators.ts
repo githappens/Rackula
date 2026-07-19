@@ -2,7 +2,7 @@
  * Raw Mutators for Layout Store
  *
  * Extracted from layout.svelte.ts — handles direct state mutation for
- * device types, placed devices, rack settings, and cables.
+ * device types, placed devices, and rack settings.
  * These bypass dirty tracking and validation — used by the command pattern
  * (undo/redo system).
  *
@@ -10,13 +10,7 @@
  * unless a rackId is explicitly provided.
  */
 
-import type {
-  Cable,
-  DeviceFace,
-  DeviceType,
-  PlacedDevice,
-  Rack,
-} from "$lib/types";
+import type { DeviceFace, DeviceType, PlacedDevice, Rack } from "$lib/types";
 import { layoutDebug } from "$lib/utils/debug";
 import { generateId } from "$lib/utils/device";
 import { sanitizeFilename } from "$lib/utils/imageUpload";
@@ -613,68 +607,3 @@ export function setLayoutNamesRaw(
   });
 }
 
-// =============================================================================
-// Cable Raw Mutators
-// =============================================================================
-
-/**
- * Add a cable directly (raw)
- * @param ctx - Layout state access
- * @param cable - Cable to add
- */
-export function addCableRaw(ctx: LayoutStateAccess, cable: Cable): void {
-  const layout = ctx.getLayout();
-  ctx.setLayout({
-    ...layout,
-    cables: [...(layout.cables ?? []), cable],
-  });
-}
-
-/**
- * Update a cable directly (raw)
- * @param ctx - Layout state access
- * @param id - Cable ID to update
- * @param updates - Properties to update
- */
-export function updateCableRaw(
-  ctx: LayoutStateAccess,
-  id: string,
-  updates: Partial<Omit<Cable, "id">>,
-): void {
-  const layout = ctx.getLayout();
-  ctx.setLayout({
-    ...layout,
-    cables: (layout.cables ?? []).map((c) =>
-      c.id === id ? { ...c, ...updates } : c,
-    ),
-  });
-}
-
-/**
- * Remove a cable directly (raw)
- * @param ctx - Layout state access
- * @param id - Cable ID to remove
- */
-export function removeCableRaw(ctx: LayoutStateAccess, id: string): void {
-  const layout = ctx.getLayout();
-  ctx.setLayout({
-    ...layout,
-    cables: (layout.cables ?? []).filter((c) => c.id !== id),
-  });
-}
-
-/**
- * Remove multiple cables directly (raw)
- * @param ctx - Layout state access
- * @param ids - Set of cable IDs to remove
- */
-export function removeCablesRaw(
-  ctx: LayoutStateAccess,
-  ids: Set<string>,
-): void {
-  const layout = ctx.getLayout();
-  ctx.setLayout({
-    ...layout,
-    cables: (layout.cables ?? []).filter((c) => !ids.has(c.id)),
-  });
-}

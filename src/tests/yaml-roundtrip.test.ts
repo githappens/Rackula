@@ -4,9 +4,8 @@ import {
   serializeLayoutToYamlWithMetadata,
   parseLayoutYaml,
 } from "$lib/utils/yaml";
-import type { Cable, DeviceType, PlacedDevice, Rack } from "$lib/types";
+import type { DeviceType, Layout, PlacedDevice, Rack } from "$lib/types";
 import {
-  createTestCable,
   createTestContainerChild,
   createTestDevice,
   createTestDeviceType,
@@ -408,36 +407,38 @@ describe("YAML nested unknown-field round-trip (#2927)", () => {
     expect(resaved).toContain("future_rack_field");
   });
 
-  it("preserves an unknown field on a cable through a save/load/save round-trip", async () => {
-    const deviceA = createTestDevice({ id: "device-a", position: 10 });
-    const deviceB = createTestDevice({ id: "device-b", position: 12 });
+  it("preserves a legacy top-level cables section through a save/load/save round-trip", async () => {
+    // The Cable model was removed in favour of Connection, but a saved layout
+    // from a prior release still carries a `cables:` array. LayoutSchema's
+    // .passthrough() keeps it as unknown data; the serializer must round-trip
+    // it as an unrecognised top-level section rather than silently dropping it.
     const deviceType = createTestDeviceType({ slug: "test-device" });
-    const cable = {
-      ...createTestCable({
-        id: "cable-1",
-        a_device_id: "device-a",
-        b_device_id: "device-b",
+    const layout = {
+      ...createTestLayout({
+        racks: [createTestRack({ id: "rack-1", devices: [] })],
+        device_types: [deviceType],
       }),
-      future_cable_field: "keep-me",
-    } as unknown as Cable;
-
-    const layout = createTestLayout({
-      racks: [createTestRack({ id: "rack-1", devices: [deviceA, deviceB] })],
-      device_types: [deviceType],
-      cables: [cable],
-    });
+      cables: [
+        {
+          id: "cable-1",
+          a_device_id: "device-a",
+          a_interface: "eth0",
+          b_device_id: "device-b",
+          b_interface: "eth1",
+        },
+      ],
+    } as unknown as Layout;
 
     const yaml = await serializeLayoutToYaml(layout);
-    expect(yaml).toContain("future_cable_field");
+    expect(yaml).toContain("cable-1");
 
     const restored = await parseLayoutYaml(yaml);
-    const restoredCable = restored.cables?.find(
-      (c) => c.id === "cable-1",
-    ) as unknown as Record<string, unknown> | undefined;
-    expect(restoredCable?.future_cable_field).toBe("keep-me");
+    const restoredCables = (restored as unknown as Record<string, unknown>)
+      .cables as { id: string }[] | undefined;
+    expect(restoredCables?.[0]?.id).toBe("cable-1");
 
     const resaved = await serializeLayoutToYaml(restored);
-    expect(resaved).toContain("future_cable_field");
+    expect(resaved).toContain("cable-1");
   });
 
   it("preserves the known-but-unlisted rack_widths field on a device type through a round-trip", async () => {

@@ -12,7 +12,6 @@ import type {
   DeviceType,
   PlacedDevice,
   Rack,
-  Cable,
   LayoutMetadata,
 } from "$lib/types";
 import type { SerializedImages } from "$lib/utils/image-encoding";
@@ -173,37 +172,6 @@ function orderRackFields(rack: Rack): Record<string, unknown> {
 }
 
 /**
- * Order Cable fields according to schema v1.0.0
- * Field order: id, a_device_id, a_interface, b_device_id, b_interface, type, color, label, length, length_unit, status
- */
-function orderCableFields(cable: Cable): Record<string, unknown> {
-  const ordered: Record<string, unknown> = {};
-
-  // --- Core Fields ---
-  ordered.id = cable.id;
-
-  // --- A-side termination ---
-  ordered.a_device_id = cable.a_device_id;
-  ordered.a_interface = cable.a_interface;
-
-  // --- B-side termination ---
-  ordered.b_device_id = cable.b_device_id;
-  ordered.b_interface = cable.b_interface;
-
-  // --- Cable properties ---
-  if (cable.type !== undefined) ordered.type = cable.type;
-  if (cable.color !== undefined) ordered.color = cable.color;
-  if (cable.label !== undefined) ordered.label = cable.label;
-  if (cable.length !== undefined) ordered.length = cable.length;
-  if (cable.length_unit !== undefined) ordered.length_unit = cable.length_unit;
-  if (cable.status !== undefined) ordered.status = cable.status;
-
-  appendUnknownKeys(ordered, cable, KNOWN_CABLE_KEYS);
-
-  return ordered;
-}
-
-/**
  * Order metadata fields according to design spec
  * Field order: id, name, schema_version, description
  */
@@ -239,7 +207,6 @@ const KNOWN_TOP_LEVEL_KEYS = new Set<string>([
   "rack_groups",
   "device_types",
   "settings",
-  "cables",
 ]);
 
 /**
@@ -345,23 +312,9 @@ const KNOWN_RACK_KEYS = new Set<string>([
   "view",
 ]);
 
-const KNOWN_CABLE_KEYS = new Set<string>([
-  "id",
-  "a_device_id",
-  "a_interface",
-  "b_device_id",
-  "b_interface",
-  "type",
-  "color",
-  "label",
-  "length",
-  "length_unit",
-  "status",
-]);
-
 /**
  * Copy any unrecognised keys from a nested source object (a DeviceType,
- * PlacedDevice, Rack, or Cable parsed by its `.passthrough()` Zod schema)
+ * PlacedDevice, or Rack parsed by its `.passthrough()` Zod schema)
  * onto the ordered output, after the known fields, so unknown fields from a
  * newer schema or legacy declared fields not yet wired into the orderer (e.g.
  * `comments`, `outlet_count`) survive a load and resave (#2927).
@@ -423,11 +376,6 @@ export function orderLayoutFields(
   // Only include rack_groups if present
   if (layout.rack_groups !== undefined && layout.rack_groups.length > 0) {
     layoutForSerialization.rack_groups = layout.rack_groups;
-  }
-
-  // Only include cables if present
-  if (layout.cables !== undefined && layout.cables.length > 0) {
-    layoutForSerialization.cables = layout.cables.map(orderCableFields);
   }
 
   // Embed user images explicitly so appendUnknownSections skips the `images`

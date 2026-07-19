@@ -39,8 +39,6 @@ import {
   replaceRackRaw,
   clearRackDevicesRaw,
   restoreRackDevicesRaw,
-  addCableRaw,
-  removeCableRaw,
 } from "./mutators";
 
 // =============================================================================
@@ -97,8 +95,6 @@ export function getCommandStoreAdapter(
     getPlacedDevicesForType: (slug) => getPlacedDevicesForType(ctx, slug),
     setActiveRackId: (id) => ctx.setActiveRackId(id),
     getActiveRackId: () => ctx.getActiveRackId(),
-    addCableRaw: (cable) => addCableRaw(ctx, cable),
-    removeCableRaw: (id) => removeCableRaw(ctx, id),
 
     // DeviceCommandStore
     moveDeviceRaw: (index, newPosition) =>

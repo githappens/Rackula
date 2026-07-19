@@ -22,7 +22,7 @@ import {
 } from "$lib/utils/yaml";
 import { toInternalUnits } from "$lib/utils/position";
 import { INVALID_LAYOUT_FORMAT_MESSAGE } from "$lib/utils/import-errors";
-import type { Cable, Layout, RackGroup } from "$lib/types";
+import type { Layout, RackGroup } from "$lib/types";
 import {
   createTestDevice,
   createTestDeviceType,
@@ -35,7 +35,7 @@ const UUID = "550e8400-e29b-41d4-a716-446655440000";
 /**
  * A layout that exercises every structural section the serializer writes:
  * metadata, multiple racks, multiple device types, placed devices, rack_groups,
- * cables, and settings. Used as the "representative layout" for round-trip
+ * and settings. Used as the "representative layout" for round-trip
  * assertions.
  */
 function representativeLayout(): Layout {
@@ -83,24 +83,11 @@ function representativeLayout(): Layout {
     },
   ];
 
-  const cables: Cable[] = [
-    {
-      id: "cable-1",
-      a_device_id: "dev-switch",
-      a_interface: "eth0",
-      b_device_id: "dev-server",
-      b_interface: "eth1",
-      type: "cat6a",
-      label: "uplink",
-    },
-  ];
-
   return createTestLayout({
     name: "Representative Lab",
     racks: [rackA, rackB],
     device_types: [switchType, serverType],
     rack_groups: rackGroups,
-    cables,
     metadata: { id: UUID, name: "Representative Lab", schema_version: "1.0" },
   });
 }
@@ -144,12 +131,8 @@ describe("representative layout save/reload round-trip (#1114)", () => {
     const typeSlugs = layout.device_types.map((t) => t.slug).sort();
     expect(typeSlugs).toEqual(["server-2u", "switch-1u"]);
 
-    // rack_groups and cables survive with their references intact.
+    // rack_groups survive with their references intact.
     expect(layout.rack_groups?.[0]?.rack_ids).toEqual(["rack-a", "rack-b"]);
-    const cable = layout.cables?.find((c) => c.id === "cable-1");
-    expect(cable?.a_device_id).toBe("dev-switch");
-    expect(cable?.b_device_id).toBe("dev-server");
-    expect(cable?.label).toBe("uplink");
   });
 
   it("survives a second save/reload cycle without losing or mutating sections", async () => {
@@ -166,7 +149,6 @@ describe("representative layout save/reload round-trip (#1114)", () => {
       "rack-a",
       "rack-b",
     ]);
-    expect(secondReload.cables?.map((c) => c.id)).toEqual(["cable-1"]);
     expect(secondReload.rack_groups?.[0]?.rack_ids).toEqual([
       "rack-a",
       "rack-b",
