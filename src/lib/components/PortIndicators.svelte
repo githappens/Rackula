@@ -12,7 +12,12 @@
   - Hover tooltips with port details (#251)
 -->
 <script lang="ts">
-  import type { InterfaceTemplate, InterfaceType, RackView } from "$lib/types";
+  import type {
+    InterfaceTemplate,
+    InterfaceType,
+    PlacedPort,
+    RackView,
+  } from "$lib/types";
   import {
     showPortTooltip,
     hidePortTooltip,
@@ -31,6 +36,10 @@
     rackView: RackView;
     showPorts?: boolean;
     onPortClick?: (iface: InterfaceTemplate) => void;
+    /** This placement's PlacedPort instances, used to resolve the pending ring. */
+    placedDevicePorts?: PlacedPort[];
+    /** The PlacedPort.id currently armed as a pending connection source, if any. */
+    pendingSourcePortId?: string | null;
   }
 
   let {
@@ -40,7 +49,22 @@
     rackView,
     showPorts = true,
     onPortClick,
+    placedDevicePorts = [],
+    pendingSourcePortId = null,
   }: Props = $props();
+
+  // Is the given interface template the armed connection source? Resolves the
+  // template to its PlacedPort by its index in the full interfaces array (which
+  // PlacedPort.template_index mirrors) and compares against the pending source.
+  function isPendingSource(iface: InterfaceTemplate): boolean {
+    if (pendingSourcePortId === null) return false;
+    const templateIndex = interfaces.indexOf(iface);
+    if (templateIndex < 0) return false;
+    const port = placedDevicePorts.find(
+      (p) => p.template_index === templateIndex,
+    );
+    return port?.id === pendingSourcePortId;
+  }
 
   // Tooltip delay timer (reactive state for proper cleanup)
   let hoverTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
@@ -192,6 +216,17 @@
     {#if !isHighDensity}
       <!-- Individual port circles for low-density devices -->
       {#each portPositions as { iface, x, y, color } (iface.name)}
+        <!-- Pending-source ring: highlights the armed port during click-to-connect -->
+        {#if isPendingSource(iface)}
+          <circle
+            class="port-pending-ring"
+            cx={x}
+            cy={y}
+            r={PORT_RADIUS + 2}
+            fill="none"
+          />
+        {/if}
+
         <circle
           class="port-circle"
           cx={x}
@@ -247,6 +282,7 @@
           fill="transparent"
           role="button"
           tabindex="0"
+          data-port-name={iface.name}
           aria-label="{iface.label ?? iface.name} ({iface.type})"
           onclick={() => handlePortClick(iface)}
           onmouseenter={(e) => handlePortMouseEnter(e, iface)}
@@ -294,6 +330,12 @@
   .port-circle {
     stroke: var(--colour-port-stroke);
     transition: r 150ms ease-out;
+  }
+
+  .port-pending-ring {
+    stroke: var(--colour-port-hover);
+    stroke-width: 1.5;
+    pointer-events: none;
   }
 
   .port-mgmt-indicator {

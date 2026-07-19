@@ -14,6 +14,7 @@
   } from "$lib/stores/canvas.svelte";
   import { getViewportStore } from "$lib/utils/viewport.svelte";
   import { getPlacementStore } from "$lib/stores/placement.svelte";
+  import { getPendingConnectionStore } from "$lib/stores/pending-connection.svelte";
   import { debug } from "$lib/utils/debug";
   import { useLongPress } from "$lib/utils/gestures";
   import {
@@ -127,6 +128,7 @@
   const canvasStore = getCanvasStore();
   const viewportStore = getViewportStore();
   const placementStore = getPlacementStore();
+  const pendingConnectionStore = getPendingConnectionStore();
 
   // Multi-rack mode: access all racks
   const racks = $derived(layoutStore.racks);
@@ -348,6 +350,10 @@
     if (!isEmptyCanvasClickTarget(event.target as CanvasPointerTarget | null)) {
       return;
     }
+    // An empty-canvas click also cancels an armed click-to-connect source, so
+    // clicking away is a consistent "never mind" for both selection and a
+    // pending connection.
+    pendingConnectionStore.cancel();
     selectionStore.clearSelection();
   }
 

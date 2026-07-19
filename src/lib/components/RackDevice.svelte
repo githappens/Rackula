@@ -28,6 +28,7 @@
   import { getLayoutStore } from "$lib/stores/layout.svelte";
   import { getCanvasStore } from "$lib/stores/canvas.svelte";
   import { getPlacementStore } from "$lib/stores/placement.svelte";
+  import { getPendingConnectionStore } from "$lib/stores/pending-connection.svelte";
   import { placementKey } from "$lib/utils/placement-key";
   import { getViewportStore } from "$lib/utils/viewport.svelte";
   import { useLongPress } from "$lib/utils/gestures";
@@ -104,7 +105,6 @@
         y: number;
       }>,
     ) => void;
-    onPortClick?: (iface: InterfaceTemplate) => void;
   }
 
   let {
@@ -135,7 +135,6 @@
     ondragend: ondragendProp,
     onduplicate,
     oncontextmenuopen,
-    onPortClick,
   }: Props = $props();
 
   // Device display name: model or slug
@@ -150,6 +149,31 @@
   const imageStore = getImageStore();
   const layoutStore = getLayoutStore();
   const placementStore = getPlacementStore();
+  const pendingConnectionStore = getPendingConnectionStore();
+
+  // This placement's PlacedPort instances (UUIDs), read from the layout store.
+  // PortIndicators uses these to map each rendered interface to its port id, so
+  // it can draw the pending-source ring and this component can arm connections.
+  const placedDevicePorts = $derived.by(() => {
+    if (!placedDeviceId) return [];
+    const rack = layoutStore.getRackById(rackId);
+    const placed = rack?.devices.find((d) => d.id === placedDeviceId);
+    return placed?.ports ?? [];
+  });
+
+  // Resolve a clicked interface template to this placement's PlacedPort (by its
+  // index in DeviceType.interfaces, which PlacedPort.template_index mirrors) and
+  // drive the click-to-connect workflow. The port UUID lives on the placed
+  // device in the layout store, not on the DeviceType passed as `device`.
+  function handlePortClick(iface: InterfaceTemplate) {
+    const templateIndex = device.interfaces?.indexOf(iface) ?? -1;
+    if (templateIndex < 0) return;
+    const port = placedDevicePorts.find(
+      (p) => p.template_index === templateIndex,
+    );
+    if (!port) return;
+    pendingConnectionStore.clickPort(port.id);
+  }
 
   // Check if display mode shows images (either 'image' or 'image-label')
   const isImageMode = $derived(
@@ -834,7 +858,9 @@
       {deviceWidth}
       {deviceHeight}
       {rackView}
-      {onPortClick}
+      pendingSourcePortId={pendingConnectionStore.sourcePortId}
+      {placedDevicePorts}
+      onPortClick={handlePortClick}
     />
   {/if}
 

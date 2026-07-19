@@ -54,6 +54,7 @@ import { handleLoad, handleExportAll, shouldSaveToServer } from "$lib/storage";
 import { runImportDevices } from "$lib/actions/import-devices-trigger";
 import { runRestoreFromFile } from "$lib/actions/restore-file-trigger";
 import { openStarterById } from "$lib/stores/starter-templates.svelte";
+import { getPendingConnectionStore } from "$lib/stores/pending-connection.svelte";
 
 export type ActionDispatch = Record<ActionId, () => void | Promise<void>>;
 
@@ -100,6 +101,14 @@ function handleEscape(): void {
   const selectionStore = getSelectionStore();
   const uiStore = getUIStore();
   const placementStore = getPlacementStore();
+  const pendingConnectionStore = getPendingConnectionStore();
+  // An armed click-to-connect source is the innermost transient state; Escape
+  // disarms it first (and only it) so the user can back out of a connection
+  // without also clearing their selection or closing a sheet.
+  if (pendingConnectionStore.sourcePortId !== null) {
+    pendingConnectionStore.cancel();
+    return;
+  }
   if (placementStore.isPlacing) {
     placementStore.cancelPlacement();
     handleFitAll();

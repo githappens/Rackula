@@ -106,6 +106,11 @@ export const locators = {
     expand: '[data-testid="panel-collapsed-strip-right"]',
   },
 
+  connection: {
+    /** A rendered cable path inside a rack's connection layer. */
+    path: ".connection-layer path",
+  },
+
   canvas: {
     root: '[data-testid="rack-canvas"]',
     panzoomContainer: ".panzoom-container",
