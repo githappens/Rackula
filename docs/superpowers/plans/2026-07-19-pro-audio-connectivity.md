@@ -4,7 +4,7 @@
 
 **Goal:** Add pro-audio port types, port direction, a Connection store, cable overlay rendering, and a filterable connection list to this Rackula fork, per `docs/superpowers/specs/2026-07-19-pro-audio-connectivity-design.md`.
 
-**Architecture:** Follow upstream Epic #1928's schema and ordering exactly (issues #1930, #369, #1931, #639 contain the acceptance criteria we implement). Data layer first (types → zod → utils), then store + undo/redo commands, then rendering, then the list panel. Every task pairs schema changes with visible UI and lands as its own commit(s) on branch `feat/pro-audio-connectivity`.
+**Architecture:** Follow upstream Epic #1928's schema and ordering exactly (issues #1930, #369, #1931, #639 contain the acceptance criteria we implement). The epic's 2026-06-06 review comments refine those issue bodies (signal_type lives on ports, arrow rendering spec, security constraints, `control-midi` naming); **where a comment conflicts with an issue body, the comment wins.** Data layer first (types → zod → utils), then store + undo/redo commands, then rendering, then the list panel. Every task pairs schema changes with visible UI and lands as its own commit(s) on branch `feat/pro-audio-connectivity`.
 
 **Tech Stack:** Svelte 5 (runes only — never Svelte 4 stores), TypeScript, Zod 4, Vitest 4 (happy-dom, tests in `src/tests/*.test.ts`), Playwright (e2e in `e2e/*.spec.ts`), Vite 8.
 
@@ -12,6 +12,7 @@
 - Commits: `type: description` format. **No AI co-author trailers** — the user's global convention overrides upstream's CLAUDE.md request.
 - TDD per upstream CLAUDE.md: test behavior, not rendering. ESLint blocks `querySelector()`, `toHaveClass()`, `toHaveLength(<literal>)`, hardcoded color assertions.
 - Heavy commands (`npm ci`, `npm run test:run`, `npm run build`, e2e) go through `busybee -- <cmd>`. `npm run dev` is interactive — no busybee.
+- Security (epic comment, 2026-06-06): any new user-provided string field gets `z.string().max(256)`; new enum fields (direction, signal type) are Zod-validated on import — no arbitrary strings from layout files.
 - Every session: `source scripts/santa-env.sh` (created in Task 0) before any npm/vite/test command.
 
 ---
@@ -334,7 +335,7 @@ Run: `busybee -- npm run test:run -- port-direction` → PASS.
 
 - [ ] **Step 5: Direction UI**
 
-`PortIndicators.svelte`: for ports whose template has `direction: "input"` or `"output"`, render a 2×3px SVG triangle beside the port circle — pointing into the device for input, out for output; nothing for bidirectional/undefined. Use existing port circle coordinates (`PORT_RADIUS = 3`, `PORT_SPACING = 8`); triangle fill `var(--colour-port-indicator)`.
+`PortIndicators.svelte`: per the epic's frontend-design comment — input ports get a small inward-pointing chevron beside the port circle, output ports an outward-pointing one, bidirectional/undefined get nothing (identical to today's network-port rendering). Use existing port circle coordinates (`PORT_RADIUS = 3`, `PORT_SPACING = 8`); chevron fill `var(--colour-port-indicator)`.
 
 `PortTooltip.svelte`: below the type line add:
 
@@ -864,7 +865,7 @@ Implement `connection-geometry.ts`: `getPortAnchor()` composes the device-Y form
 
 - [ ] **Step 4: Components**
 
-`ConnectionPath.svelte` (props: `connection`, `aAnchor`, `bAnchor`, `channelX`, `highlighted`): renders `<path d={...} fill="none" stroke={connection.color ?? "var(--colour-port-default)"} stroke-width={highlighted ? 3 : 1.5}>`; when both ports have explicit direction, a small triangle marker at the path midpoint pointing output→input; `onmouseenter/onmouseleave` set a `hoveredConnectionId` in the connection store; hover also shows `connection.label` via `<title>`.
+`ConnectionPath.svelte` (props: `connection`, `aAnchor`, `bAnchor`, `channelX`, `highlighted`): renders `<path d={...} fill="none" stroke={connection.color ?? "var(--colour-port-default)"} stroke-width={highlighted ? 3 : 1.5}>`. Direction arrows per the epic's frontend-design spec: an **8px SVG `<marker>` defined in `<defs>`** placed at the path midpoint pointing output→input; mixed pairs (one directional port, one bidirectional) get a single arrow from the output side; both-bidirectional renders a plain line; the marker inherits the connection's stroke color. Direction is computed from the ports at render time — no data model involvement. `onmouseenter/onmouseleave` set a `hoveredConnectionId` in the connection store; hover also shows `connection.label` via `<title>`.
 
 `ConnectionLayer.svelte` (props: `rackId`, `rackHeight`, `uHeight`, `rackWidth`): `$derived` over the connection store — resolve each connection's two ports to placed devices **in this rack** (skip others), compute anchors, render `<g class="connection-layer">` of ConnectionPaths. Reactivity gives "connections follow devices when dragged" for free — verify, don't build anything special.
 
@@ -978,15 +979,18 @@ git commit -m "feat: click-port-to-port connection creation with cancel and erro
 
 ---
 
-## Task 9: signal_type with inference, colors, and compatibility warnings
+## Task 9: Signal types on ports, with inference, tooltip display, colors, and mismatch warning
+
+Per the epic's 2026-06-06 review comments (which supersede the older issue bodies): `signal_type` lives on **InterfaceTemplate and PlacedPort** (their P0), the utility is `inferSignalType(type, direction)`, and PortTooltip shows explicit values normally / inferred values as *"inferred: X"* in italics. **One flagged fork deviation:** we also add an optional `signal_type` override on `Connection` so the Connections panel can label a specific cable without editing ports — additive optional field, cheap to rebase away if upstream models it differently.
 
 **Files:**
-- Modify: `src/lib/types/index.ts` (SignalType; `signal_type?` on Connection)
-- Modify: `src/lib/schemas/index.ts:400-418` (ConnectionSchema)
-- Modify: `src/lib/utils/port-utils.ts` (inferSignalType)
+- Modify: `src/lib/types/index.ts` (SignalType; `signal_type?` on InterfaceTemplate, PlacedPort, Connection)
+- Modify: `src/lib/schemas/index.ts` (SignalTypeSchema; the three optional fields — enum-validated on import per the security comment)
+- Modify: `src/lib/utils/port-utils.ts` (inferSignalType, getConnectionSignalType; instantiatePorts copies template value)
+- Modify: `src/lib/components/PortTooltip.svelte` (signal line with inferred-italics)
 - Modify: `src/lib/styles/tokens.css` (signal color tokens)
 - Modify: `src/lib/components/ConnectionPath.svelte` (color precedence)
-- Modify: `src/lib/stores/connection.svelte.ts` (validation warning; inference on create)
+- Modify: `src/lib/stores/connection.svelte.ts` (mismatch warning)
 - Test: `src/tests/signal-type.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -994,89 +998,148 @@ git commit -m "feat: click-port-to-port connection creation with cancel and erro
 ```typescript
 // src/tests/signal-type.test.ts
 import { describe, it, expect } from "vitest";
-import { inferSignalType } from "$lib/utils/port-utils";
+import { inferSignalType, getConnectionSignalType } from "$lib/utils/port-utils";
+import type { Connection, PlacedPort } from "$lib/types";
 
 describe("inferSignalType", () => {
   it("maps unambiguous connectors directly", () => {
     expect(inferSignalType("adat-optical")).toBe("digital-audio-adat");
-    expect(inferSignalType("midi-din")).toBe("midi");
+    expect(inferSignalType("midi-din")).toBe("control-midi");
     expect(inferSignalType("bnc")).toBe("clock-word");
-    expect(inferSignalType("ts-1-4")).toBe("analog-audio-instrument");
+    expect(inferSignalType("usb-c")).toBe("data-usb");
   });
-  it("defaults ambiguous analog connectors to line level", () => {
+  it("uses direction to split XLR into mic-in vs line-out", () => {
+    expect(inferSignalType("xlr-3", "input")).toBe("analog-audio-mic");
+    expect(inferSignalType("xlr-3", "output")).toBe("analog-audio-line");
     expect(inferSignalType("xlr-3")).toBe("analog-audio-line");
+  });
+  it("defaults other analog connectors to line level", () => {
     expect(inferSignalType("trs-1-4")).toBe("analog-audio-line");
+    expect(inferSignalType("ts-1-4")).toBe("analog-audio-line");
     expect(inferSignalType("rca")).toBe("analog-audio-line");
     expect(inferSignalType("db25-audio")).toBe("analog-audio-line");
   });
-  it("returns undefined for non-AV types", () => {
+  it("returns undefined for network types (ethernet is implied, not stored)", () => {
     expect(inferSignalType("1000base-t")).toBeUndefined();
+  });
+});
+
+describe("getConnectionSignalType precedence", () => {
+  const port = (over: Partial<PlacedPort>): PlacedPort =>
+    ({ id: "p", template_name: "1", template_index: 0, type: "trs-1-4", ...over }) as PlacedPort;
+  const conn = (over: Partial<Connection>): Connection =>
+    ({ id: "c", a_port_id: "a", b_port_id: "b", ...over }) as Connection;
+
+  it("connection override wins over everything", () => {
+    expect(
+      getConnectionSignalType(conn({ signal_type: "clock-word" }), port({ signal_type: "analog-audio-mic" }), port({})),
+    ).toBe("clock-word");
+  });
+  it("explicit port signal beats inference", () => {
+    expect(
+      getConnectionSignalType(conn({}), port({ signal_type: "digital-audio-spdif", type: "rca" }), port({ type: "rca" })),
+    ).toBe("digital-audio-spdif");
+  });
+  it("falls back to inference from the a-side port", () => {
+    expect(getConnectionSignalType(conn({}), port({ type: "adat-optical" }), port({ type: "adat-optical" }))).toBe("digital-audio-adat");
   });
 });
 ```
 
-Plus a connection-store case: creating a connection between an `adat-optical` port and a `bnc` port succeeds **with** a signal-mismatch warning.
+Plus a connection-store case: connecting an `adat-optical` port to a `bnc` port succeeds **with** a signal-mismatch warning. (Note: upstream's review deferred compatibility checks to P3 because creation didn't exist yet; we ship creation in the same branch, so a minimal two-port compare is not premature — conscious, flagged deviation, warn-only.)
 
 - [ ] **Step 2: Run to verify fail, implement**
 
-`types/index.ts`:
+Run: `busybee -- npm run test:run -- signal-type` → FAIL (exports missing).
+
+`types/index.ts` — upstream decision #8's ten values plus three studio additions (additive; keep their exact names):
 
 ```typescript
-/** What the cable carries — independent of connector type (spike #1927) */
+/** What a port/cable carries — independent of connector type (spike #1927, epic decision #8) */
 export type SignalType =
-  | "analog-audio-mic"
-  | "analog-audio-line"
-  | "analog-audio-instrument"
+  // Upstream Phase-1 set
+  | "ethernet" | "power-ac"
+  | "analog-audio-mic" | "analog-audio-line" | "analog-audio-speaker"
   | "digital-audio-aes3"
-  | "digital-audio-adat"
-  | "digital-audio-spdif"
-  | "midi"
-  | "clock-word"
-  | "other";
+  | "digital-video-hdmi" | "digital-video-sdi"
+  | "control-midi" | "data-usb"
+  // Fork additions (studio needs; additive)
+  | "digital-audio-adat" | "digital-audio-spdif" | "clock-word";
 ```
 
-Add `signal_type?: SignalType;` to `Connection`; `SignalTypeSchema = z.enum([...])` and the optional field in `ConnectionSchema`.
+Add `signal_type?: SignalType;` to `InterfaceTemplate`, `PlacedPort`, and `Connection`. In schemas: `SignalTypeSchema = z.enum([...])` and the optional field on all three object schemas.
 
 `port-utils.ts`:
 
 ```typescript
-const SIGNAL_BY_TYPE: Partial<Record<InterfaceType, SignalType>> = {
-  "xlr-3": "analog-audio-line",
-  "trs-1-4": "analog-audio-line",
-  "ts-1-4": "analog-audio-instrument",
-  "rca": "analog-audio-line",
-  "adat-optical": "digital-audio-adat",
-  "midi-din": "midi",
-  "bnc": "clock-word",
-  "db25-audio": "analog-audio-line",
-};
-export function inferSignalType(type: InterfaceType): SignalType | undefined {
-  return SIGNAL_BY_TYPE[type];
+export function inferSignalType(
+  type: InterfaceType,
+  direction?: PortDirection,
+): SignalType | undefined {
+  switch (type) {
+    case "xlr-3":
+      return direction === "input" ? "analog-audio-mic" : "analog-audio-line";
+    case "trs-1-4":
+    case "ts-1-4":
+    case "rca":
+    case "db25-audio":
+      return "analog-audio-line";
+    case "adat-optical":
+      return "digital-audio-adat";
+    case "midi-din":
+      return "control-midi";
+    case "bnc":
+      return "clock-word";
+    case "usb-a":
+    case "usb-b":
+    case "usb-c":
+      return "data-usb";
+    default:
+      return undefined;
+  }
+}
+
+/** Effective signal of a cable: connection override → explicit port value → inference. */
+export function getConnectionSignalType(
+  connection: Connection,
+  a: PlacedPort | undefined,
+  b: PlacedPort | undefined,
+): SignalType | undefined {
+  if (connection.signal_type) return connection.signal_type;
+  if (a?.signal_type) return a.signal_type;
+  if (b?.signal_type) return b.signal_type;
+  const inferredA = a ? inferSignalType(a.type, a.direction) : undefined;
+  if (inferredA) return inferredA;
+  return b ? inferSignalType(b.type, b.direction) : undefined;
 }
 ```
 
-Store: on create, `signal_type: input.signal_type ?? inferSignalType(a.port.type)`; validation warns when both ports infer different signal types (warn only — cross-signal patches can be intentional).
+`instantiatePorts()`: copy `signal_type: iface.signal_type` (explicit template values only — inferred values are computed at read time so a later direction edit stays consistent; "compute, don't store", same spirit as upstream's gender decision).
 
-`tokens.css` (verify palette token names against the file):
+`PortTooltip.svelte`: add a signal line — explicit `port.signal_type` renders as the primary label; otherwise, if `inferSignalType(port.type, port.direction)` returns a value, render it italic as `inferred: <label>`. Add a `SIGNAL_LABELS` map next to `TYPE_LABELS` (e.g. `"analog-audio-mic": "Mic level"`, `"digital-audio-adat": "ADAT"`, `"control-midi": "MIDI"`, `"clock-word": "Word clock"`).
+
+`connection.svelte.ts` validation: warn when both ports' effective signals (explicit ?? inferred) exist and differ.
+
+`tokens.css` — color by signal family (verify palette token names against the file):
 
 ```css
---colour-signal-analog-line: var(--emerald-500);
---colour-signal-analog-mic: var(--amber-500);
---colour-signal-analog-instrument: var(--purple-500);
---colour-signal-digital: var(--blue-500);
+--colour-signal-analog: var(--emerald-500);
+--colour-signal-digital-audio: var(--blue-500);
+--colour-signal-video: var(--purple-500);
 --colour-signal-midi: var(--pink-500);
 --colour-signal-clock: var(--neutral-400);
+--colour-signal-data: var(--amber-500);
 --colour-signal-other: var(--neutral-500);
 ```
 
-`ConnectionPath.svelte` color precedence: `connection.color` (explicit user choice) → signal-type token → `var(--colour-port-default)`. Map the three `digital-audio-*` values to `--colour-signal-digital`.
+`ConnectionPath.svelte` color precedence: `connection.color` (explicit user choice) → family token of `getConnectionSignalType(...)` (`analog-audio-*` → analog, `digital-audio-*` → digital-audio, `digital-video-*` → video, `control-midi` → midi, `clock-word` → clock, `data-usb`/`ethernet` → data) → `var(--colour-port-default)`.
 
 - [ ] **Step 3: Run gates, commit**
 
 ```bash
 busybee -- npm run test:run && npm run check
 git add -A src/lib src/tests
-git commit -m "feat: add signal types with inference and color-coded cables"
+git commit -m "feat: add port-level signal types with inference and color-coded cables"
 ```
 
 ---
@@ -1128,9 +1191,9 @@ describe("connection filters", () => {
 
 - [ ] **Step 3: Build the panel**
 
-`ConnectionsPanel.svelte`: a `$derived` row model joining connections → ports → devices → racks (device name, port label/name, type, signal, rack). Renders: filter controls (signal-type chips, rack select, search input), then a table of rows. Interactions:
+`ConnectionsPanel.svelte`: a `$derived` row model joining connections → ports → devices → racks (device name, port label/name, connector type, effective signal via `getConnectionSignalType()`, rack). Renders: filter controls (signal-type chips, rack select, search input), then a table of rows. Interactions:
 - Row hover → set `hoveredConnectionId` on the connection store (ConnectionPath thickens — same mechanism as path hover, now bidirectional).
-- Inline `<select>` for signal_type and text input for label → `layout.updateConnectionRecorded(id, {...})`.
+- Inline `<select>` for signal and text input for label → `layout.updateConnectionRecorded(id, {...})` — the select writes the `Connection.signal_type` override (the fork-added field from Task 9), leaving port-level values untouched.
 - Delete button per row → `layout.removeConnectionRecorded(id)`.
 - Rows with unresolvable ports (should be impossible post-cascade, but YAML edits happen) render with a loud "missing port" error style — never silently hidden.
 
