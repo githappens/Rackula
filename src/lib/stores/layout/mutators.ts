@@ -620,7 +620,7 @@ export function removeConnectionRaw(
 }
 
 /**
- * Update a connection's mutable fields (label/color) directly (raw).
+ * Update a connection's mutable fields (label/color/signal_type) directly (raw).
  * @param ctx - Layout state access
  * @param id - Connection id to update
  * @param updates - Fields to merge onto the connection
@@ -628,7 +628,7 @@ export function removeConnectionRaw(
 export function updateConnectionRaw(
   ctx: LayoutStateAccess,
   id: string,
-  updates: Partial<Pick<Connection, "label" | "color">>,
+  updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
 ): void {
   const layout = ctx.getLayout();
   const connections = layout.connections ?? [];

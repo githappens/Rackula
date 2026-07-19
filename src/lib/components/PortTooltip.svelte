@@ -4,9 +4,9 @@
   Renders at the document level, positioned using fixed coordinates.
 -->
 <script lang="ts">
-  import type { InterfaceType, SignalType } from "$lib/types";
+  import type { InterfaceType } from "$lib/types";
   import { getPortTooltipState } from "$lib/stores/portTooltip.svelte";
-  import { inferSignalType } from "$lib/utils/port-utils";
+  import { inferSignalType, getSignalLabel } from "$lib/utils/port-utils";
 
   // Get reactive tooltip state from store
   const tooltipState = $derived(getPortTooltipState());
@@ -36,30 +36,9 @@
     "db25-audio": "DB25 (TASCAM)",
   };
 
-  // Human-readable signal names, one per SignalType value.
-  const SIGNAL_LABELS: Record<SignalType, string> = {
-    ethernet: "Ethernet",
-    "power-ac": "AC power",
-    "analog-audio-mic": "Mic level",
-    "analog-audio-line": "Line level",
-    "analog-audio-speaker": "Speaker level",
-    "digital-audio-aes3": "AES3",
-    "digital-video-hdmi": "HDMI",
-    "digital-video-sdi": "SDI",
-    "control-midi": "MIDI",
-    "data-usb": "USB data",
-    "digital-audio-adat": "ADAT",
-    "digital-audio-spdif": "S/PDIF",
-    "clock-word": "Word clock",
-  };
-
   // Get human-readable type label
   function getTypeLabel(type: InterfaceType): string {
     return TYPE_LABELS[type] ?? type;
-  }
-
-  function getSignalLabel(signal: SignalType): string {
-    return SIGNAL_LABELS[signal] ?? signal;
   }
 
   // Explicit signal takes precedence; otherwise fall back to inference from the

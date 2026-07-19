@@ -17,7 +17,7 @@ export interface ConnectionCommandStore {
   removeConnectionRaw(id: string): Connection | undefined;
   updateConnectionRaw(
     id: string,
-    updates: Partial<Pick<Connection, "label" | "color">>,
+    updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
   ): void;
 }
 
@@ -73,21 +73,25 @@ export function createRemoveConnectionCommand(
 }
 
 /**
- * Create a command to update a connection's label/color.
+ * Create a command to update a connection's label/color/signal_type override.
  * Captures the previous values for undo.
  */
 export function createUpdateConnectionCommand(
   id: string,
-  previous: Partial<Pick<Connection, "label" | "color">>,
-  updates: Partial<Pick<Connection, "label" | "color">>,
+  previous: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
+  updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
   store: ConnectionCommandStore,
 ): Command {
   // Capture as flat literals of the primitive fields so a live Svelte 5
   // $state proxy passed in as previous/updates does not leak into history.
-  const previousCopy: Partial<Pick<Connection, "label" | "color">> = {
+  const previousCopy: Partial<
+    Pick<Connection, "label" | "color" | "signal_type">
+  > = {
     ...previous,
   };
-  const updatesCopy: Partial<Pick<Connection, "label" | "color">> = {
+  const updatesCopy: Partial<
+    Pick<Connection, "label" | "color" | "signal_type">
+  > = {
     ...updates,
   };
   return {

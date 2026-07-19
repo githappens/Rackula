@@ -1,6 +1,6 @@
 <!--
   SidebarTabs Component
-  Segmented navigation for the sidebar: Layouts | Racks | Devices
+  Segmented navigation for the sidebar: Layouts | Racks | Devices | Connections
   Uses bits-ui Tabs for accessibility and keyboard navigation.
 
   Styled to match the Brand / Category / A-Z SegmentedControl directly below it
@@ -29,6 +29,7 @@
     { id: "layouts", label: "Layouts", icon: "▦" },
     { id: "racks", label: "Racks", icon: "▤" },
     { id: "devices", label: "Devices", icon: "⬡" },
+    { id: "connections", label: "Connections", icon: "⇄" },
   ];
 
   function handleValueChange(value: string | undefined) {

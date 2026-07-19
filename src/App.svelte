@@ -21,6 +21,7 @@
   import SidebarTabs from "$lib/components/SidebarTabs.svelte";
   import RackList from "$lib/components/RackList.svelte";
   import LayoutsLibrary from "$lib/components/LayoutsLibrary.svelte";
+  import ConnectionsPanel from "$lib/components/ConnectionsPanel.svelte";
   import PersistenceEffects from "$lib/components/PersistenceEffects.svelte";
   import DialogOrchestrator from "$lib/components/DialogOrchestrator.svelte";
   import RestoreFromFileDialog from "$lib/components/RestoreFromFileDialog.svelte";
@@ -111,6 +112,7 @@
     layouts: "Layouts",
     racks: "Racks",
     devices: "Devices",
+    connections: "Connections",
   };
   const sidebarTabLabel = $derived(sidebarTabLabels[uiStore.sidebarTab]);
 
@@ -654,6 +656,8 @@
                     onnewlayout={handleNewLayout}
                     onexport={handleLayoutExport}
                   />
+                {:else if uiStore.sidebarTab === "connections"}
+                  <ConnectionsPanel />
                 {/if}
               </div>
             {/if}

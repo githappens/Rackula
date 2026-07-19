@@ -7,7 +7,7 @@ import type { DisplayMode, AnnotationField } from "$lib/types";
 import { safeGetItem, safeSetItem } from "$lib/utils/safe-storage";
 
 // Sidebar tab type (hide removed - collapse is now gesture-based)
-export type SidebarTab = "devices" | "racks" | "layouts";
+export type SidebarTab = "devices" | "racks" | "layouts" | "connections";
 
 // Right side panel tab type: Edit (contextual properties) and View (layout view toggles)
 export type SidePanelTab = "edit" | "view";
@@ -29,6 +29,7 @@ const VALID_SIDEBAR_TABS: readonly SidebarTab[] = [
   "devices",
   "racks",
   "layouts",
+  "connections",
 ] as const;
 
 /**

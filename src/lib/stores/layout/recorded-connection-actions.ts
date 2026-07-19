@@ -62,22 +62,26 @@ export function addConnectionRecorded(
 }
 
 /**
- * Update a connection's label/color with undo/redo support.
+ * Update a connection's label/color/signal_type override with undo/redo
+ * support. The signal_type field is the per-cable override that wins over
+ * port-level signals; writing it here leaves both ports untouched.
  * @returns true if the connection existed and the update was recorded.
  */
 export function updateConnectionRecorded(
   ctx: LayoutStateAccess,
   id: string,
-  updates: Partial<Pick<Connection, "label" | "color">>,
+  updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
 ): boolean {
   const connectionStore = getConnectionStore();
   const existing = connectionStore.getConnection(id);
   if (!existing) return false;
 
-  const previous: Partial<Pick<Connection, "label" | "color">> = {
-    label: existing.label,
-    color: existing.color,
-  };
+  const previous: Partial<Pick<Connection, "label" | "color" | "signal_type">> =
+    {
+      label: existing.label,
+      color: existing.color,
+      signal_type: existing.signal_type,
+    };
 
   const history = ctx.getHistory();
   const adapter = getCommandStoreAdapter(ctx);

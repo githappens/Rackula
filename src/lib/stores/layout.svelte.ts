@@ -1075,7 +1075,7 @@ export function createLayoutStore(
 
   function updateConnectionRaw(
     id: string,
-    updates: Partial<Pick<Connection, "label" | "color">>,
+    updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
   ): void {
     updateConnectionRawImpl(stateAccess, id, updates);
   }
@@ -1088,7 +1088,7 @@ export function createLayoutStore(
 
   function updateConnectionRecorded(
     id: string,
-    updates: Partial<Pick<Connection, "label" | "color">>,
+    updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
   ): boolean {
     return updateConnectionRecordedImpl(stateAccess, id, updates);
   }

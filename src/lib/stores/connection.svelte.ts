@@ -262,7 +262,7 @@ export function getConnectionStore() {
       layoutStore.addConnectionRaw(connection),
     updateConnectionRaw: (
       id: string,
-      updates: Partial<Pick<Connection, "label" | "color">>,
+      updates: Partial<Pick<Connection, "label" | "color" | "signal_type">>,
     ) => layoutStore.updateConnectionRaw(id, updates),
     removeConnectionRaw: (id: string) => layoutStore.removeConnectionRaw(id),
 

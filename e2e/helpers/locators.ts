@@ -109,6 +109,16 @@ export const locators = {
   connection: {
     /** A rendered cable path inside a rack's connection layer. */
     path: ".connection-layer path",
+    /** The Connections sidebar tab trigger. */
+    tab: '[data-testid="sidebar-tab-connections"]',
+    /** The Connections panel root. */
+    panel: '[data-testid="connections-panel"]',
+    /** A single connection row in the panel. */
+    row: '[data-testid="connection-row"]',
+    /** Free-text search input in the panel. */
+    search: '[data-testid="connections-search"]',
+    /** Empty-state message shown when no rows match the filters. */
+    empty: '[data-testid="connections-empty"]',
   },
 
   canvas: {

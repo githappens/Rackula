@@ -27,6 +27,34 @@ export const AV_INTERFACE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Human-readable signal names, one per SignalType value. Shared source for the
+ * port tooltip and the Connections panel so a label change lands in both.
+ */
+export const SIGNAL_LABELS: Record<SignalType, string> = {
+  ethernet: "Ethernet",
+  "power-ac": "AC power",
+  "analog-audio-mic": "Mic level",
+  "analog-audio-line": "Line level",
+  "analog-audio-speaker": "Speaker level",
+  "digital-audio-aes3": "AES3",
+  "digital-video-hdmi": "HDMI",
+  "digital-video-sdi": "SDI",
+  "control-midi": "MIDI",
+  "data-usb": "USB data",
+  "digital-audio-adat": "ADAT",
+  "digital-audio-spdif": "S/PDIF",
+  "clock-word": "Word clock",
+};
+
+/**
+ * Label for a signal type, falling back to the raw slug for forward
+ * compatibility if a new value is not yet in SIGNAL_LABELS.
+ */
+export function getSignalLabel(signal: SignalType): string {
+  return SIGNAL_LABELS[signal] ?? signal;
+}
+
+/**
  * Categorize an interface type string into network, power, console, or av.
  * Uses string matching so it handles future types (e.g. power-inlet-*) even
  * before they are added to the InterfaceType enum. AV types are the exception:
