@@ -13,100 +13,139 @@
 - TDD per upstream CLAUDE.md: test behavior, not rendering. ESLint blocks `querySelector()`, `toHaveClass()`, `toHaveLength(<literal>)`, hardcoded color assertions.
 - Heavy commands (`npm ci`, `npm run test:run`, `npm run build`, e2e) go through `busybee -- <cmd>`. `npm run dev` is interactive — no busybee.
 - Security (epic comment, 2026-06-06): any new user-provided string field gets `z.string().max(256)`; new enum fields (direction, signal type) are Zod-validated on import — no arbitrary strings from layout files.
-- Every session: `source scripts/santa-env.sh` (created in Task 0) before any npm/vite/test command.
+- **All toolchain commands run inside the project flake's dev shell and nowhere else.** Every `npm ...` / `npx ...` command in this plan is shorthand for `nix develop -c npm ...` (heavy ones: `busybee -- nix develop -c npm ...`). Never modify the user's PATH, never source env scripts into their shell, never install anything globally — the dev shell is ephemeral per command.
 
 ---
 
-## Task 0: Toolchain under Santa lockdown
+## Task 0: Toolchain under Santa lockdown (nix flake, zero env mutation)
 
-Santa only allows binary execution from `/nix/store/...` and `<project>/build*/...`. Node comes from the nix store; esbuild and Playwright browsers do not.
+Santa only allows binary execution from `/nix/store/...` and `<project>/build*/...`. **Hard constraint: the user's environment is untouchable** — no PATH edits, no sourced env scripts, no global installs. Everything is scoped inside a project flake dev shell, invoked per command as `nix develop -c <cmd>`.
+
+Why the flake alone doesn't cover esbuild: esbuild's JS wrapper spawns a native binary and refuses any binary whose version doesn't exactly match the installed npm package (0.28.1 today). A nixpkgs-pinned esbuild would break on every npm-side bump. So the flake's shell hook points `ESBUILD_BINARY_PATH` at a copy of the *npm-installed* binary staged under `build/` — always version-matched, executes from an allowed path, and the env var exists only inside the ephemeral shell.
 
 **Files:**
-- Create: `scripts/santa-env.sh`
-- Create: `scripts/santa-setup.sh`
-- Create: `docs/fork/santa-toolchain.md`
+- Create: `flake.nix` (+ `flake.lock`, generated)
+- Create: `scripts/stage-esbuild.sh`
+- Create: `docs/fork/dev-environment.md`
 
-- [ ] **Step 1: Put node on PATH and install deps**
+- [ ] **Step 1: Write the flake and the staging script**
 
-Node is not on PATH by default. Find the nix store node (known good: `nodejs-24.15.0`):
+`flake.nix`:
 
-```bash
-export PATH="$(ls -d /nix/store/*-nodejs-24.15.0/bin | head -1):$PATH"
-node --version   # expect v24.15.0
-cd /Users/bence/Work/plato/rackbuilder
-busybee -- npm ci
+```nix
+{
+  description = "Rackula fork — dev shell for Santa-lockdown machines (fork-only file)";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
+  outputs = { self, nixpkgs }:
+    let
+      systems = [ "aarch64-darwin" ];
+      eachSystem = f:
+        nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
+    in {
+      devShells = eachSystem (pkgs: {
+        default = pkgs.mkShell {
+          packages = [ pkgs.nodejs_24 ];
+          shellHook = ''
+            # Santa allows exec only from /nix/store and <project>/build*/.
+            # esbuild spawns a native binary from node_modules (blocked);
+            # scripts/stage-esbuild.sh copies the npm-installed binary into
+            # build/ so it is always version-matched. Scoped to this shell.
+            export ESBUILD_BINARY_PATH="$PWD/build/esbuild"
+            # Playwright browsers must also execute from an allowed path.
+            export PLAYWRIGHT_BROWSERS_PATH="$PWD/build/pw-browsers"
+          '';
+        };
+      });
+    };
+}
 ```
 
-- [ ] **Step 2: Create the env + setup scripts**
-
-`scripts/santa-setup.sh` (run once after every `npm ci`):
+`scripts/stage-esbuild.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# Copies native binaries that tools spawn from node_modules into build/,
-# where Santa's allow-list permits execution. Re-run after npm ci.
+# Re-run after every `npm ci`/esbuild bump. Copies the npm-installed esbuild
+# binary into build/ where Santa's allow-list permits execution.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+src="node_modules/@esbuild/darwin-arm64/bin/esbuild"
+[ -f "$src" ] || { echo "stage-esbuild: $src missing — run npm ci first" >&2; exit 1; }
 mkdir -p build
-cp node_modules/@esbuild/darwin-arm64/bin/esbuild build/esbuild
-build/esbuild --version
-echo "santa-setup: esbuild $(build/esbuild --version) staged in build/"
-```
-
-`scripts/santa-env.sh` (source in every shell before npm commands):
-
-```bash
-# source this file: `source scripts/santa-env.sh`
-export PATH="$(ls -d /nix/store/*-nodejs-*/bin 2>/dev/null | sort -V | tail -1):$PATH"
-export ESBUILD_BINARY_PATH="$PWD/build/esbuild"
-export PLAYWRIGHT_BROWSERS_PATH="$PWD/build/pw-browsers"
+cp -f "$src" build/esbuild
+echo "stage-esbuild: staged esbuild $(build/esbuild --version) into build/"
 ```
 
 ```bash
-chmod +x scripts/santa-setup.sh
-./scripts/santa-setup.sh    # expect: prints esbuild 0.28.1
-source scripts/santa-env.sh
+chmod +x scripts/stage-esbuild.sh
+git add flake.nix scripts/stage-esbuild.sh   # flakes ignore untracked files — add BEFORE nix develop
 ```
 
-esbuild's JS wrapper honors `ESBUILD_BINARY_PATH` and requires the binary version to exactly match the npm package (0.28.1) — that's why we copy the installed binary instead of using a nix-provided one.
-
-- [ ] **Step 3: Keep build/ and local scripts out of git status noise**
-
-`build/` is not in upstream's `.gitignore`. Use local excludes (no upstream conflict surface):
+- [ ] **Step 2: Verify the shell works and the user's env is untouched**
 
 ```bash
-echo "build/" >> .git/info/exclude
-git status --short   # expect: only the new scripts/docs files
+nix develop -c node --version    # expect v24.x from /nix/store (first run fetches nixpkgs — slow once)
+node --version                    # in the plain shell: still "command not found" — the invariant we keep
+git add flake.lock
+```
+
+- [ ] **Step 3: Install deps and stage esbuild**
+
+```bash
+busybee -- nix develop -c npm ci
+nix develop -c ./scripts/stage-esbuild.sh   # expect: staged esbuild 0.28.1
+echo "build/" >> .git/info/exclude          # build/ is not in upstream's .gitignore; keep it local
+git status --short                          # only flake.nix, flake.lock, scripts, docs
 ```
 
 - [ ] **Step 4: Verify the three critical commands**
 
 ```bash
-busybee -- npm run test:run     # full vitest suite — expect PASS (green baseline)
-busybee -- npm run build        # vite build — expect success, no Santa popup
-npm run dev                     # expect vite dev server on :5173; Ctrl-C after confirming
+busybee -- nix develop -c npm run test:run   # full vitest suite — green baseline
+busybee -- nix develop -c npm run build      # vite build — no Santa popup
+nix develop -c npm run dev                   # dev server on :5173; Ctrl-C after confirming
 ```
 
-If any step triggers a Santa popup, note which binary path it tried to execute and redirect it into `build/` the same way (that's the generic fix pattern). Rollup's `@rollup/rollup-darwin-arm64` is a `.node` module loaded in-process, not executed — expected to work as-is.
+If anything triggers a Santa popup, note which binary path it tried to execute and redirect it the same way (env knob or staged copy into `build/` — that's the generic pattern). Rollup's `@rollup/rollup-darwin-arm64` is a `.node` module loaded in-process, not executed — expected to work as-is.
 
-- [ ] **Step 5: Install Playwright browsers into build/ and verify e2e smoke**
+- [ ] **Step 5: Playwright browsers**
+
+Preferred (pure nix, zero downloads): nixpkgs' `playwright-driver.browsers` — browsers execute from `/nix/store`. Only valid if the driver version matches npm's `@playwright/test` (1.61.x):
 
 ```bash
-source scripts/santa-env.sh
-npx playwright install chromium
-busybee -- npm run test:e2e:smoke   # expect PASS
+nix eval --raw nixpkgs#playwright-driver.version
+```
+
+If it matches (same major.minor), switch the flake's shellHook to:
+
+```nix
+export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
+export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+```
+
+If it does NOT match, keep the `build/pw-browsers` export and download into it instead:
+
+```bash
+nix develop -c npx playwright install chromium
+```
+
+Either way, verify:
+
+```bash
+busybee -- nix develop -c npm run test:e2e:smoke   # expect PASS
 ```
 
 - [ ] **Step 6: Document**
 
-Write `docs/fork/santa-toolchain.md`: what Santa blocks, the two scripts, the re-run-after-npm-ci rule, and the "watch the popup, redirect into build/" debugging pattern. Short — half a page.
+Write `docs/fork/dev-environment.md`: the `nix develop -c` convention, why esbuild is staged (exact-version rule), the re-stage-after-npm-ci rule, which Playwright option is active, and the "watch the Santa popup, redirect into build/" debugging pattern. Half a page.
 
 - [ ] **Step 7: Create the feature branch and commit**
 
 ```bash
 git checkout -b feat/pro-audio-connectivity
-git add scripts/santa-env.sh scripts/santa-setup.sh docs/fork/santa-toolchain.md
-git commit -m "chore: add Santa lockdown toolchain setup for this fork"
+git add flake.nix flake.lock scripts/stage-esbuild.sh docs/fork/dev-environment.md
+git commit -m "chore: add nix flake dev shell for Santa-lockdown toolchain"
 ```
 
 ---
@@ -1285,10 +1324,9 @@ git commit -m "feat: export filtered connection list as CSV patch sheet"
 
 ## Final verification
 
-- [ ] Full gates, exactly what CI runs:
+- [ ] Full gates, exactly what CI runs (all via `nix develop -c`, per the house rules):
 
 ```bash
-source scripts/santa-env.sh
 busybee -- npm run test:run
 npm run check
 npm run lint
@@ -1304,7 +1342,7 @@ busybee -- npm run test:e2e:smoke
 
 Develop on `feat/pro-audio-connectivity`; upstream PRs are manufactured later by cherry-picking task commits onto clean branches cut from `upstream/main` (`up/<issue>-<slug>`). This only works if the commit-hygiene invariant holds:
 
-- **Fork-only commits** touch only `scripts/santa-*.sh`, `docs/fork/`, `docs/superpowers/`. Never mix these paths into a feature commit.
+- **Fork-only commits** touch only `flake.nix`, `flake.lock`, `scripts/stage-esbuild.sh`, `docs/fork/`, `docs/superpowers/`. Never mix these paths into a feature commit.
 - **Feature commits** touch only `src/`, `src/tests/`, `e2e/`. One task = one commit (as the task steps already enforce) so each maps to one upstream issue-sized PR.
 - **Upstream-only when engaged, in dependency order:** #1930 first (no deps, cheapest receptivity test), then #369, then #1931/#639. Never PR a task whose dependencies haven't landed upstream.
 - **Stays fork-only:** Santa toolchain, spec/plan docs, `Connection.signal_type` override, the warn-only mismatch check (upstream deferred to P3), ConnectionsPanel + filters + CSV (not in their M5).
