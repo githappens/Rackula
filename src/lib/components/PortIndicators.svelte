@@ -18,6 +18,11 @@
     hidePortTooltip,
   } from "$lib/stores/portTooltip.svelte";
   import { getPortCategory } from "$lib/utils/port-utils";
+  import {
+    computePortLayout,
+    PORT_RADIUS,
+    HIGH_DENSITY_THRESHOLD,
+  } from "$lib/utils/port-layout";
 
   interface Props {
     interfaces: InterfaceTemplate[];
@@ -69,13 +74,10 @@
     av: "var(--colour-port-av)",
   };
 
-  // Constants for port rendering
-  const PORT_RADIUS = 3;
-  const PORT_SPACING = 8;
-  const PORT_Y_OFFSET = 8; // Distance from bottom of device
-
-  // High-density threshold
-  const HIGH_DENSITY_THRESHOLD = 24;
+  // Constants for port rendering (PORT_RADIUS, PORT_SPACING, PORT_Y_OFFSET,
+  // HIGH_DENSITY_THRESHOLD live in port-layout.ts so the drawn circles and the
+  // cable anchors stay in agreement).
+  const PORT_Y_OFFSET = 8; // Distance from bottom of device (badge math)
 
   // Badge dimensions for high-density mode
   const BADGE_WIDTH = 24;
@@ -103,19 +105,21 @@
   const portPositions = $derived.by(() => {
     if (isHighDensity) return [];
 
-    const count = visibleInterfaces.length;
-    if (count === 0) return [];
+    const layout = computePortLayout(
+      visibleInterfaces.length,
+      deviceWidth,
+      deviceHeight,
+    );
 
-    const totalWidth = (count - 1) * PORT_SPACING;
-    const startX = (deviceWidth - totalWidth) / 2;
-    const y = deviceHeight - PORT_Y_OFFSET;
-
-    return visibleInterfaces.map((iface, i) => ({
-      iface,
-      x: startX + i * PORT_SPACING,
-      y,
-      color: getInterfaceColor(iface.type),
-    }));
+    return visibleInterfaces.map((iface, i) => {
+      const point = layout[i]!;
+      return {
+        iface,
+        x: point.x,
+        y: point.y,
+        color: getInterfaceColor(iface.type),
+      };
+    });
   });
 
   // Group ports by type for high-density mode

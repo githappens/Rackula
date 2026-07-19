@@ -99,6 +99,13 @@ export function validateConnection(
 }
 
 /**
+ * Transient hover highlight, shared across every per-call store view. Not part
+ * of the layout: it is view state (which connection the pointer is over), read
+ * by the render layer to thicken the hovered path. Task 10 also reads it.
+ */
+let hoveredConnectionId = $state<string | null>(null);
+
+/**
  * Get the connection store: CRUD + queries over `layout.connections`.
  *
  * Returns a fresh view object per call (no independent state); all data lives
@@ -219,6 +226,12 @@ export function getConnectionStore() {
     get connections() {
       return getConnections();
     },
+    get hoveredConnectionId() {
+      return hoveredConnectionId;
+    },
+    setHoveredConnection(id: string | null) {
+      hoveredConnectionId = id;
+    },
     getConnection,
     getConnectionsForPort,
     getConnectionsForDevice,
@@ -245,10 +258,10 @@ export function getConnectionStore() {
 }
 
 /**
- * Reset the connection store (for testing). Connection state lives in the
- * layout store, so this is a no-op kept for API symmetry with sibling stores;
- * call resetLayoutStore() to clear connections.
+ * Reset the connection store (for testing). Connection data lives in the layout
+ * store (call resetLayoutStore() to clear it); the only independent state here
+ * is the transient hover highlight, which this clears.
  */
 export function resetConnectionStore(): void {
-  // No independent state to reset.
+  hoveredConnectionId = null;
 }

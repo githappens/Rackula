@@ -27,6 +27,7 @@
   import RackFrame from "./RackFrame.svelte";
   import RackDropZone from "./RackDropZone.svelte";
   import RackChristmasHat from "./RackChristmasHat.svelte";
+  import ConnectionLayer from "./ConnectionLayer.svelte";
   import DeviceContextMenu from "./DeviceContextMenu.svelte";
   import {
     getDropFeedback,
@@ -587,6 +588,18 @@
           {/if}
         </g>
       {/each}
+    </g>
+
+    <!-- Layer 2b: Connections (cables between ports), same transform as devices
+         so anchors line up with the rendered port circles. -->
+    <g transform="translate(0, {RACK_PADDING + RAIL_WIDTH})">
+      <ConnectionLayer
+        rackId={rack.id}
+        rackHeight={rack.height}
+        uHeight={U_HEIGHT}
+        rackWidth={RACK_WIDTH}
+        rackView={effectiveFaceFilter}
+      />
     </g>
 
     <!-- Empty-state hint: only in a face-filtered (dual) view, so an empty rear
