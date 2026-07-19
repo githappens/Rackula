@@ -1300,6 +1300,16 @@ busybee -- npm run test:e2e:smoke
 - [ ] Manual pass in `npm run dev`: build a small studio rack (interface, preamp, compressor, patchbay), patch preamp→compressor→interface + an ADAT run, confirm: colored cables with direction arrows, hover highlighting both ways, filters hiding/showing runs, CSV export contents, undo/redo through the whole session, YAML save → reload → connections intact.
 - [ ] `git fetch upstream && git log --oneline upstream/main -10` — note (don't act on) any upstream cabling work that landed while we built; flag overlap to the user.
 
+## Upstreaming strategy (read before committing anything)
+
+Develop on `feat/pro-audio-connectivity`; upstream PRs are manufactured later by cherry-picking task commits onto clean branches cut from `upstream/main` (`up/<issue>-<slug>`). This only works if the commit-hygiene invariant holds:
+
+- **Fork-only commits** touch only `scripts/santa-*.sh`, `docs/fork/`, `docs/superpowers/`. Never mix these paths into a feature commit.
+- **Feature commits** touch only `src/`, `src/tests/`, `e2e/`. One task = one commit (as the task steps already enforce) so each maps to one upstream issue-sized PR.
+- **Upstream-only when engaged, in dependency order:** #1930 first (no deps, cheapest receptivity test), then #369, then #1931/#639. Never PR a task whose dependencies haven't landed upstream.
+- **Stays fork-only:** Santa toolchain, spec/plan docs, `Connection.signal_type` override, the warn-only mismatch check (upstream deferred to P3), ConnectionsPanel + filters + CSV (not in their M5).
+- **Trailers:** fork commits carry no AI co-author trailer (user rule). If a commit is cherry-picked for an upstream PR, amend the trailer on at that point, per the user's per-PR decision — upstream's CONTRIBUTING requests it.
+
 ## Explicitly deferred (do not build)
 
 Signal-flow graph tab, product-photo→SVG faceplates, patch-bay normalling, external endpoints, multi-rack cables, matrix routing, upstream PRs, mobile connection workflow, export of cables into PNG/PDF/SVG exports (`src/lib/utils/export/svg.ts` has its own render path — overlay cables will NOT appear in exports; this is a known, accepted gap for this phase — the CSV patch list is the printable artifact).
