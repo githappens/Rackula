@@ -32,8 +32,10 @@ import {
   createUpdateDeviceNotesCommand,
   createUpdateDeviceIpCommand,
   createBatchCommand,
+  createRemoveConnectionCommand,
   type Command,
 } from "../commands";
+import { getConnectionStore } from "../connection.svelte";
 import type { LayoutStateAccess } from "./types";
 import { getCommandStoreAdapter } from "./command-adapters";
 import { getRackById } from "./rack-actions";
@@ -432,7 +434,7 @@ export function removeDeviceRecorded(
     .filter((d) => d.container_id === device.id)
     .map((child) => snapshotDevice(child));
 
-  const command =
+  const removeCommand =
     children.length > 0
       ? createRemoveDeviceWithChildrenCommand(
           device,
@@ -447,7 +449,41 @@ export function removeDeviceRecorded(
           deviceName,
           layout.metadata?.id ?? "",
         );
-  history.execute(command);
+
+  // Cascade-delete port-to-port connections (#639). A connection references
+  // PlacedPort ids, not device ids, so a removed device would leave orphaned
+  // connections pointing at ports that no longer exist. Gather every connection
+  // touching any port of the removed device (and its carried children, which
+  // this command removes too) and remove them in the same undoable unit.
+  const connectionStore = getConnectionStore();
+  // A single connection can link a carrier port to one of its carried children,
+  // so it is returned by getConnectionsForDevice for BOTH the carrier and the
+  // child. Dedupe by connection id before building the batch: a duplicate would
+  // re-add the connection twice on undo, leaving two identical entries, and
+  // inflate the warn count below. The command factory detaches each connection
+  // from reactive state, so no shallow copy is needed here.
+  const seen = new Set<string>();
+  const affected = [device, ...children]
+    .flatMap((d) => connectionStore.getConnectionsForDevice(d.id))
+    .filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
+
+  if (affected.length > 0) {
+    // BATCH executes in order: remove connections first, then the device(s).
+    // undo runs in reverse: restore the device(s), then re-add the connections,
+    // so the ports a connection references exist again before it comes back.
+    const commands: Command[] = [
+      ...affected.map((c) => createRemoveConnectionCommand(c, adapter)),
+      removeCommand,
+    ];
+    // Loud per #639: a device delete silently dropping wiring is exactly the
+    // kind of hidden data loss the no-silent-fallbacks rule guards against.
+    console.warn(
+      `Removed ${affected.length} connection(s) attached to removed device`,
+    );
+    history.execute(createBatchCommand(`Remove ${deviceName}`, commands));
+  } else {
+    history.execute(removeCommand);
+  }
   ctx.markDirty();
   return deviceName;
 }

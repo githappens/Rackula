@@ -29,13 +29,16 @@ export function createAddConnectionCommand(
   connection: Connection,
   store: ConnectionCommandStore,
 ): Command {
-  const connectionCopy = structuredClone(connection);
+  // Connection is a flat, primitive-only shape, so a shallow spread fully
+  // detaches it from reactive state. structuredClone would throw
+  // DataCloneError on a Svelte 5 $state proxy passed in by a live caller.
+  const connectionCopy = { ...connection };
   return {
     type: "ADD_CONNECTION",
     description: "Add connection",
     timestamp: Date.now(),
     execute() {
-      store.addConnectionRaw(structuredClone(connectionCopy));
+      store.addConnectionRaw({ ...connectionCopy });
     },
     undo() {
       store.removeConnectionRaw(connectionCopy.id);
@@ -52,7 +55,10 @@ export function createRemoveConnectionCommand(
   connection: Connection,
   store: ConnectionCommandStore,
 ): Command {
-  const connectionCopy = structuredClone(connection);
+  // Flat clone, not structuredClone: the caller may pass a live Svelte 5
+  // $state proxy (e.g. removeConnectionRecorded), which structuredClone
+  // rejects with DataCloneError. Connection holds only primitives.
+  const connectionCopy = { ...connection };
   return {
     type: "REMOVE_CONNECTION",
     description: "Remove connection",
@@ -61,7 +67,7 @@ export function createRemoveConnectionCommand(
       store.removeConnectionRaw(connectionCopy.id);
     },
     undo() {
-      store.addConnectionRaw(structuredClone(connectionCopy));
+      store.addConnectionRaw({ ...connectionCopy });
     },
   };
 }
@@ -76,15 +82,23 @@ export function createUpdateConnectionCommand(
   updates: Partial<Pick<Connection, "label" | "color">>,
   store: ConnectionCommandStore,
 ): Command {
+  // Capture as flat literals of the primitive fields so a live Svelte 5
+  // $state proxy passed in as previous/updates does not leak into history.
+  const previousCopy: Partial<Pick<Connection, "label" | "color">> = {
+    ...previous,
+  };
+  const updatesCopy: Partial<Pick<Connection, "label" | "color">> = {
+    ...updates,
+  };
   return {
     type: "UPDATE_CONNECTION",
     description: "Update connection",
     timestamp: Date.now(),
     execute() {
-      store.updateConnectionRaw(id, updates);
+      store.updateConnectionRaw(id, updatesCopy);
     },
     undo() {
-      store.updateConnectionRaw(id, previous);
+      store.updateConnectionRaw(id, previousCopy);
     },
   };
 }
