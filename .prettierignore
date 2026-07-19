@@ -11,3 +11,9 @@ static/schemas/
 # Design spec assets from the M12 mobile UX brainstorm (#2467).
 # The HTML mockup is a one-off design artifact, not production code.
 docs/superpowers/specs/assets/
+
+# Fork-local build output (Santa-lockdown toolchain): relocated node_modules
+# and downloaded Playwright browsers live here. Never format them.
+# See docs/fork/dev-environment.md.
+build-deps/
+build/

@@ -9,6 +9,7 @@
 **Tech Stack:** Svelte 5 (runes only — never Svelte 4 stores), TypeScript, Zod 4, Vitest 4 (happy-dom, tests in `src/tests/*.test.ts`), Playwright (e2e in `e2e/*.spec.ts`), Vite 8.
 
 **House rules (override notes):**
+
 - Commits: `type: description` format. **No AI co-author trailers** — the user's global convention overrides upstream's CLAUDE.md request.
 - TDD per upstream CLAUDE.md: test behavior, not rendering. ESLint blocks `querySelector()`, `toHaveClass()`, `toHaveLength(<literal>)`, hardcoded color assertions.
 - Heavy commands (`npm ci`, `npm run test:run`, `npm run build`, e2e) go through `busybee -- <cmd>`. `npm run dev` is interactive — no busybee.
@@ -24,9 +25,10 @@
 
 Santa only allows binary execution from `/nix/store/...` and `<project>/build*/...`. **Hard constraint: the user's environment is untouchable** — no PATH edits, no sourced env scripts, no global installs. Everything is scoped inside a project flake dev shell, invoked per command as `nix develop -c <cmd>`.
 
-How esbuild (and every other native binary in `node_modules`) is handled: **Santa matches the resolved realpath of the executed file, not the path used to launch it** (verified empirically on this machine). npm has no supported way to install anywhere but `./node_modules` (`prefix` is global-only; npm issue #13933). So after install we relocate the whole tree under `build-deps/` and leave a symlink: `node_modules -> build-deps/node_modules`. Every binary's realpath then lands under the allowed `build*` path, no per-binary staging. The one catch is install *timing*: esbuild's postinstall execs its binary from the default `./node_modules` path mid-install, before any relocate can run, so `npm ci` must use `--ignore-scripts` (esbuild's binary ships in the `@esbuild/*` tarball and works without the postinstall, which only validates it).
+How esbuild (and every other native binary in `node_modules`) is handled: **Santa matches the resolved realpath of the executed file, not the path used to launch it** (verified empirically on this machine). npm has no supported way to install anywhere but `./node_modules` (`prefix` is global-only; npm issue #13933). So after install we relocate the whole tree under `build-deps/` and leave a symlink: `node_modules -> build-deps/node_modules`. Every binary's realpath then lands under the allowed `build*` path, no per-binary staging. The one catch is install _timing_: esbuild's postinstall execs its binary from the default `./node_modules` path mid-install, before any relocate can run, so `npm ci` must use `--ignore-scripts` (esbuild's binary ships in the `@esbuild/*` tarball and works without the postinstall, which only validates it).
 
 **Files:**
+
 - Create: `flake.nix` (+ `flake.lock`, generated)
 - Create: `scripts/relocate-node-modules.sh`
 - Create: `docs/fork/dev-environment.md`
@@ -148,6 +150,7 @@ git commit -m "chore: add nix flake dev shell for Santa-lockdown toolchain"
 Upstream epic Phase 0, item 1. Studio-relevant subset of the spike taxonomy (`docs/research/spike-1927-pro-audio-av-connectivity.md`).
 
 **Files:**
+
 - Modify: `src/lib/types/index.ts:130-160` (InterfaceType union)
 - Modify: `src/lib/schemas/index.ts:136-166` (InterfaceTypeSchema)
 - Modify: `src/lib/utils/port-utils.ts:9,16-29` (PortCategory, getPortCategory)
@@ -167,8 +170,14 @@ import { getPortCategory } from "$lib/utils/port-utils";
 import { InterfaceTemplateSchema } from "$lib/schemas";
 
 const AV_TYPES = [
-  "xlr-3", "trs-1-4", "ts-1-4", "rca",
-  "adat-optical", "midi-din", "bnc", "db25-audio",
+  "xlr-3",
+  "trs-1-4",
+  "ts-1-4",
+  "rca",
+  "adat-optical",
+  "midi-din",
+  "bnc",
+  "db25-audio",
 ] as const;
 
 describe("AV interface types", () => {
@@ -181,17 +190,19 @@ describe("AV interface types", () => {
     expect(getPortCategory("console")).toBe("console");
   });
 
-  it.each(AV_TYPES)("schema accepts an interface template of type %s", (type) => {
-    const result = InterfaceTemplateSchema.safeParse({ name: "Mic 1", type });
-    expect(result.success).toBe(true);
-  });
+  it.each(AV_TYPES)(
+    "schema accepts an interface template of type %s",
+    (type) => {
+      const result = InterfaceTemplateSchema.safeParse({ name: "Mic 1", type });
+      expect(result.success).toBe(true);
+    },
+  );
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `busybee -- npm run test:run -- av-interface-types`
-Expected: FAIL — schema rejects unknown enum values; getPortCategory returns a non-"av" category.
+Run: `busybee -- npm run test:run -- av-interface-types` Expected: FAIL — schema rejects unknown enum values; getPortCategory returns a non-"av" category.
 
 - [ ] **Step 3: Implement**
 
@@ -217,8 +228,14 @@ In `src/lib/utils/port-utils.ts`:
 export type PortCategory = "network" | "power" | "console" | "av";
 
 const AV_INTERFACE_TYPES: ReadonlySet<string> = new Set([
-  "xlr-3", "trs-1-4", "ts-1-4", "rca",
-  "adat-optical", "midi-din", "bnc", "db25-audio",
+  "xlr-3",
+  "trs-1-4",
+  "ts-1-4",
+  "rca",
+  "adat-optical",
+  "midi-din",
+  "bnc",
+  "db25-audio",
 ]);
 ```
 
@@ -259,6 +276,7 @@ git commit -m "feat: add pro-audio interface types and av port category"
 Implements upstream #1930 verbatim (its acceptance criteria are the contract).
 
 **Files:**
+
 - Modify: `src/lib/types/index.ts` (PortDirection type; InterfaceTemplate + PlacedPort fields)
 - Modify: `src/lib/schemas/index.ts:302-312,379-390` (both schemas)
 - Modify: `src/lib/utils/port-utils.ts:38-49` (inferDirection, instantiatePorts)
@@ -293,7 +311,10 @@ describe("inferDirection", () => {
 
 describe("instantiatePorts direction", () => {
   const deviceType = {
-    slug: "test-pre", model: "Test Pre", u_height: 1, category: "av-media",
+    slug: "test-pre",
+    model: "Test Pre",
+    u_height: 1,
+    category: "av-media",
     interfaces: [
       { name: "Mic In", type: "xlr-3", direction: "input" },
       { name: "Eth", type: "1000base-t" },
@@ -310,7 +331,10 @@ describe("instantiatePorts direction", () => {
 describe("backward compatibility", () => {
   it("PlacedPort without direction still validates", () => {
     const result = PlacedPortSchema.safeParse({
-      id: "p1", template_name: "1", template_index: 0, type: "1000base-t",
+      id: "p1",
+      template_name: "1",
+      template_index: 0,
+      type: "1000base-t",
     });
     expect(result.success).toBe(true);
   });
@@ -319,8 +343,7 @@ describe("backward compatibility", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `busybee -- npm run test:run -- port-direction`
-Expected: FAIL — `inferDirection` is not exported.
+Run: `busybee -- npm run test:run -- port-direction` Expected: FAIL — `inferDirection` is not exported.
 
 - [ ] **Step 3: Implement the data layer**
 
@@ -373,7 +396,13 @@ Run: `busybee -- npm run test:run -- port-direction` → PASS.
 
 ```svelte
 {#if port.direction}
-  <div class="port-tooltip-type">{port.direction === "input" ? "Input" : port.direction === "output" ? "Output" : "Bidirectional"}</div>
+  <div class="port-tooltip-type">
+    {port.direction === "input"
+      ? "Input"
+      : port.direction === "output"
+        ? "Output"
+        : "Bidirectional"}
+  </div>
 {/if}
 ```
 
@@ -396,6 +425,7 @@ git commit -m "feat: add PortDirection with inference and direction indicators"
 Real gear shapes so the editor is testable by hand and by e2e. Category `av-media` exists already.
 
 **Files:**
+
 - Modify: `src/lib/data/starterLibrary.ts` (after the Network section, ~line 88)
 - Test: `src/tests/av-starter-devices.test.ts`
 
@@ -410,8 +440,7 @@ import { STARTER_LIBRARY } from "$lib/data/starterLibrary";
 // use it here — the array constant holding the starter DeviceTypes.
 
 describe("audio starter devices", () => {
-  const bySlug = (slug: string) =>
-    STARTER_LIBRARY.find((d) => d.slug === slug);
+  const bySlug = (slug: string) => STARTER_LIBRARY.find((d) => d.slug === slug);
 
   it("includes an audio interface with directional AV ports", () => {
     const dev = bySlug("audio-interface");
@@ -425,15 +454,16 @@ describe("audio starter devices", () => {
   it("includes a patchbay whose ports are explicitly bidirectional", () => {
     const dev = bySlug("patchbay-48");
     expect(dev).toBeDefined();
-    expect(dev!.interfaces!.every((i) => i.direction === "bidirectional")).toBe(true);
+    expect(dev!.interfaces!.every((i) => i.direction === "bidirectional")).toBe(
+      true,
+    );
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `busybee -- npm run test:run -- av-starter-devices`
-Expected: FAIL — devices don't exist. (If the export is named differently, fix the import first; the test must fail on missing *devices*, not missing import.)
+Run: `busybee -- npm run test:run -- av-starter-devices` Expected: FAIL — devices don't exist. (If the export is named differently, fix the import first; the test must fail on missing _devices_, not missing import.)
 
 - [ ] **Step 3: Implement**
 
@@ -512,6 +542,7 @@ git commit -m "feat: add pro-audio starter devices with directional ports"
 Upstream M5 decision: "Cable model is removed in M5. No migration path — Connection model only."
 
 **Files:**
+
 - Delete: `src/lib/stores/cables.svelte.ts` (+ its test file in `src/tests/`)
 - Modify: `src/lib/types/index.ts:399-428` (Cable interface; also `CableType`, `CableStatus`, `LengthUnit` **only if** nothing else references them)
 - Modify: `src/lib/schemas/index.ts:427-467,807-809` (CableSchema; `cables:` line in LayoutSchema)
@@ -525,7 +556,7 @@ Upstream M5 decision: "Cable model is removed in M5. No migration path — Conne
 rg -n '\bCable\b|\bcables\b|CableSchema|createTestCable' src e2e --glob '!*.svelte' -l
 ```
 
-**Trap:** `cable-management` is a *device category* string used by `CategoryIcon.svelte`, `CategoryIconSVG.svelte`, `deviceFilters.ts`, `AddDeviceForm.svelte` — those hits are NOT the Cable model. Do not touch the category.
+**Trap:** `cable-management` is a _device category_ string used by `CategoryIcon.svelte`, `CategoryIconSVG.svelte`, `deviceFilters.ts`, `AddDeviceForm.svelte` — those hits are NOT the Cable model. Do not touch the category.
 
 - [ ] **Step 2: Delete the model, store, schema, factories, serialization entries**
 
@@ -537,8 +568,16 @@ Loading behavior after removal: LayoutSchema uses `.passthrough()`, so an old YA
 // append to src/tests/layout-store.test.ts (or a new src/tests/cable-removal.test.ts)
 it("loads a layout containing a legacy cables array without error", () => {
   const legacy = {
-    ...minimalValidLayout(),          // use the existing factory/fixture helper
-    cables: [{ id: "c1", a_device_id: "d1", a_interface: "1", b_device_id: "d2", b_interface: "2" }],
+    ...minimalValidLayout(), // use the existing factory/fixture helper
+    cables: [
+      {
+        id: "c1",
+        a_device_id: "d1",
+        a_interface: "1",
+        b_device_id: "d2",
+        b_interface: "2",
+      },
+    ],
   };
   const result = LayoutSchema.safeParse(legacy);
   expect(result.success).toBe(true);
@@ -547,8 +586,7 @@ it("loads a layout containing a legacy cables array without error", () => {
 
 - [ ] **Step 3: Run the full suite and typecheck**
 
-Run: `busybee -- npm run test:run && npm run check`
-Expected: PASS with zero references to the removed symbols. `rg -n 'CableSchema|createTestCable|addCableRaw' src` returns nothing.
+Run: `busybee -- npm run test:run && npm run check` Expected: PASS with zero references to the removed symbols. `rg -n 'CableSchema|createTestCable|addCableRaw' src` returns nothing.
 
 - [ ] **Step 4: Commit**
 
@@ -564,6 +602,7 @@ git commit -m "refactor: remove deprecated Cable model in favor of Connection"
 Implements upstream #369 — its API block is the contract. State lives in `layout.connections` (already in LayoutSchema line 807; verify the `Layout` TS interface has `connections?: Connection[]` and add it if missing).
 
 **Files:**
+
 - Create: `src/lib/stores/connection.svelte.ts`
 - Create: `src/lib/stores/commands/connection.ts`
 - Create: `src/lib/stores/layout/recorded-connection-actions.ts`
@@ -578,7 +617,10 @@ Implements upstream #369 — its API block is the contract. State lives in `layo
 // src/tests/connection-store.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { getLayoutStore, resetLayoutStore } from "$lib/stores/layout.svelte";
-import { getConnectionStore, resetConnectionStore } from "$lib/stores/connection.svelte";
+import {
+  getConnectionStore,
+  resetConnectionStore,
+} from "$lib/stores/connection.svelte";
 import { createTestDeviceType } from "./factories";
 
 // Helper: place two devices with AV ports, return their PlacedPorts.
@@ -588,10 +630,12 @@ function placeTwoAvDevices() {
   // createTestDeviceType must accept an interfaces override — extend the
   // factory if it doesn't yet (same optional-field pattern as existing overrides).
   const pre = createTestDeviceType({
-    slug: "pre", interfaces: [{ name: "Out L", type: "xlr-3", direction: "output" }],
+    slug: "pre",
+    interfaces: [{ name: "Out L", type: "xlr-3", direction: "output" }],
   });
   const comp = createTestDeviceType({
-    slug: "comp", interfaces: [
+    slug: "comp",
+    interfaces: [
       { name: "In 1", type: "trs-1-4", direction: "input" },
       { name: "In 2", type: "trs-1-4", direction: "input" },
     ],
@@ -610,14 +654,20 @@ describe("Connection store", () => {
   it("addConnection creates a connection between two ports", () => {
     const { outPort, inPort1 } = placeTwoAvDevices();
     const store = getConnectionStore();
-    const result = store.addConnection({ a_port_id: outPort.id, b_port_id: inPort1.id });
+    const result = store.addConnection({
+      a_port_id: outPort.id,
+      b_port_id: inPort1.id,
+    });
     expect("connection" in result).toBe(true);
     expect(store.getConnectionsForPort(outPort.id)).toHaveLength(1);
   });
 
   it("rejects connecting a port to itself", () => {
     const { outPort } = placeTwoAvDevices();
-    const result = getConnectionStore().addConnection({ a_port_id: outPort.id, b_port_id: outPort.id });
+    const result = getConnectionStore().addConnection({
+      a_port_id: outPort.id,
+      b_port_id: outPort.id,
+    });
     expect("errors" in result).toBe(true);
   });
 
@@ -625,7 +675,10 @@ describe("Connection store", () => {
     const { outPort, inPort1, inPort2 } = placeTwoAvDevices();
     const store = getConnectionStore();
     store.addConnection({ a_port_id: outPort.id, b_port_id: inPort1.id });
-    const result = store.addConnection({ a_port_id: outPort.id, b_port_id: inPort2.id });
+    const result = store.addConnection({
+      a_port_id: outPort.id,
+      b_port_id: inPort2.id,
+    });
     expect("errors" in result).toBe(true);
   });
 
@@ -633,7 +686,10 @@ describe("Connection store", () => {
     const { outPort, inPort1 } = placeTwoAvDevices();
     const store = getConnectionStore();
     store.addConnection({ a_port_id: outPort.id, b_port_id: inPort1.id });
-    const result = store.addConnection({ a_port_id: inPort1.id, b_port_id: outPort.id });
+    const result = store.addConnection({
+      a_port_id: inPort1.id,
+      b_port_id: outPort.id,
+    });
     expect("errors" in result).toBe(true);
   });
 
@@ -647,14 +703,20 @@ describe("Connection store", () => {
 
   it("rejects connections referencing a non-existent port (loud, not silent)", () => {
     const store = getConnectionStore();
-    const result = store.addConnection({ a_port_id: "ghost-a", b_port_id: "ghost-b" });
+    const result = store.addConnection({
+      a_port_id: "ghost-a",
+      b_port_id: "ghost-b",
+    });
     expect("errors" in result).toBe(true);
   });
 
   it("supports undo/redo through the history", () => {
     const { outPort, inPort1 } = placeTwoAvDevices();
     const layout = getLayoutStore();
-    layout.addConnectionRecorded({ a_port_id: outPort.id, b_port_id: inPort1.id });
+    layout.addConnectionRecorded({
+      a_port_id: outPort.id,
+      b_port_id: inPort1.id,
+    });
     expect(getConnectionStore().connections).toHaveLength(1);
     layout.undo();
     expect(getConnectionStore().connections).toHaveLength(0);
@@ -664,12 +726,11 @@ describe("Connection store", () => {
 });
 ```
 
-Note on `toHaveLength`: upstream's ESLint blocks *literal* length assertions on data arrays; assertions on behavior-driven counts like these are the established pattern in `layout-store.test.ts` — mirror how that file phrases them if the lint rule complains (e.g. compare before/after counts).
+Note on `toHaveLength`: upstream's ESLint blocks _literal_ length assertions on data arrays; assertions on behavior-driven counts like these are the established pattern in `layout-store.test.ts` — mirror how that file phrases them if the lint rule complains (e.g. compare before/after counts).
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `busybee -- npm run test:run -- connection-store`
-Expected: FAIL — module `$lib/stores/connection.svelte` does not exist.
+Run: `busybee -- npm run test:run -- connection-store` Expected: FAIL — module `$lib/stores/connection.svelte` does not exist.
 
 - [ ] **Step 3: Implement the store**
 
@@ -678,7 +739,7 @@ Expected: FAIL — module `$lib/stores/connection.svelte` does not exist.
 Key pieces:
 
 ```typescript
-import { generateId } from "$lib/utils/id";          // match actual util path used by cables store
+import { generateId } from "$lib/utils/id"; // match actual util path used by cables store
 import { getPortCategory } from "$lib/utils/port-utils";
 import type { Connection, PlacedPort } from "$lib/types";
 
@@ -697,11 +758,14 @@ export interface ConnectionValidation {
 export function validateConnection(
   input: CreateConnectionInput,
   existing: Connection[],
-  resolvePort: (id: string) => { port: PlacedPort; deviceId: string } | undefined,
+  resolvePort: (
+    id: string,
+  ) => { port: PlacedPort; deviceId: string } | undefined,
 ): ConnectionValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
-  if (input.a_port_id === input.b_port_id) errors.push("Cannot connect a port to itself");
+  if (input.a_port_id === input.b_port_id)
+    errors.push("Cannot connect a port to itself");
   const a = resolvePort(input.a_port_id);
   const b = resolvePort(input.b_port_id);
   if (!a) errors.push(`Port not found: ${input.a_port_id}`);
@@ -712,7 +776,11 @@ export function validateConnection(
       if (ports.includes(input.a_port_id) || ports.includes(input.b_port_id)) {
         const isDuplicate =
           ports.includes(input.a_port_id) && ports.includes(input.b_port_id);
-        errors.push(isDuplicate ? "These ports are already connected" : "Port already has a connection");
+        errors.push(
+          isDuplicate
+            ? "These ports are already connected"
+            : "Port already has a connection",
+        );
         break;
       }
     }
@@ -721,7 +789,9 @@ export function validateConnection(
     if (a.port.direction === "input" && b.port.direction === "input")
       warnings.push("Both ports are inputs");
     if (getPortCategory(a.port.type) !== getPortCategory(b.port.type))
-      warnings.push(`Connecting ${a.port.type} to ${b.port.type} (different categories)`);
+      warnings.push(
+        `Connecting ${a.port.type} to ${b.port.type} (different categories)`,
+      );
   }
   return { errors, warnings };
 }
@@ -732,25 +802,46 @@ The store factory mirrors the cable store: getters (`connections`, `getConnectio
 `mutators.ts` raw fns (same style as the removed cable raws):
 
 ```typescript
-export function addConnectionRaw(access: LayoutStateAccess, connection: Connection): void {
+export function addConnectionRaw(
+  access: LayoutStateAccess,
+  connection: Connection,
+): void {
   const layout = access.getLayout();
   layout.connections = [...(layout.connections ?? []), connection];
   access.markDirty();
 }
-export function removeConnectionRaw(access: LayoutStateAccess, id: string): Connection | undefined { /* filter + return removed */ }
-export function updateConnectionRaw(access: LayoutStateAccess, id: string, updates: Partial<Connection>): void { /* map-replace */ }
+export function removeConnectionRaw(
+  access: LayoutStateAccess,
+  id: string,
+): Connection | undefined {
+  /* filter + return removed */
+}
+export function updateConnectionRaw(
+  access: LayoutStateAccess,
+  id: string,
+  updates: Partial<Connection>,
+): void {
+  /* map-replace */
+}
 ```
 
 `commands/connection.ts` — mirror `createPlaceDeviceCommand` (`commands/device.ts:102-133`):
 
 ```typescript
-export function createAddConnectionCommand(connection: Connection, store: ConnectionCommandStore): Command {
+export function createAddConnectionCommand(
+  connection: Connection,
+  store: ConnectionCommandStore,
+): Command {
   return {
     type: "ADD_CONNECTION",
     description: "Add connection",
     timestamp: Date.now(),
-    execute() { store.addConnectionRaw(connection); },
-    undo() { store.removeConnectionRaw(connection.id); },
+    execute() {
+      store.addConnectionRaw(connection);
+    },
+    undo() {
+      store.removeConnectionRaw(connection.id);
+    },
   };
 }
 // createRemoveConnectionCommand: execute removes (capturing the removed object), undo re-adds it
@@ -781,6 +872,7 @@ git commit -m "feat: add Connection store with validation and undo/redo"
 Implements upstream #639: removing a device removes connections referencing its ports; undo restores both.
 
 **Files:**
+
 - Modify: `src/lib/stores/layout/recorded-device-actions.ts` (removal path)
 - Modify: `src/lib/stores/commands/device.ts` (or compose via BATCH — see below)
 - Test: `src/tests/connection-cascade.test.ts`
@@ -791,18 +883,29 @@ Implements upstream #639: removing a device removes connections referencing its 
 // src/tests/connection-cascade.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { getLayoutStore, resetLayoutStore } from "$lib/stores/layout.svelte";
-import { getConnectionStore, resetConnectionStore } from "$lib/stores/connection.svelte";
+import {
+  getConnectionStore,
+  resetConnectionStore,
+} from "$lib/stores/connection.svelte";
 
 describe("connection cascade on device removal", () => {
-  beforeEach(() => { resetLayoutStore(); resetConnectionStore(); });
+  beforeEach(() => {
+    resetLayoutStore();
+    resetConnectionStore();
+  });
 
   it("removing a device removes its connections; undo restores both", () => {
     // reuse the placeTwoAvDevices() helper — extract it into src/tests/factories.ts
     const { outPort, inPort1, compDeviceId } = placeTwoAvDevices();
     const layout = getLayoutStore();
-    layout.addConnectionRecorded({ a_port_id: outPort.id, b_port_id: inPort1.id });
+    layout.addConnectionRecorded({
+      a_port_id: outPort.id,
+      b_port_id: inPort1.id,
+    });
 
-    layout.removeDeviceRecorded(/* args per existing removal API */ compDeviceId);
+    layout.removeDeviceRecorded(
+      /* args per existing removal API */ compDeviceId,
+    );
     expect(getConnectionStore().connections).toHaveLength(0);
 
     layout.undo(); // device AND its connection come back atomically
@@ -813,8 +916,7 @@ describe("connection cascade on device removal", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `busybee -- npm run test:run -- connection-cascade`
-Expected: FAIL — connection survives device removal (orphaned reference).
+Run: `busybee -- npm run test:run -- connection-cascade` Expected: FAIL — connection survives device removal (orphaned reference).
 
 - [ ] **Step 3: Implement**
 
@@ -835,6 +937,7 @@ git commit -m "feat: cascade-delete connections when a device is removed"
 Implements upstream #1931. Same-rack connections only (multi-rack is deferred, per spec).
 
 **Files:**
+
 - Create: `src/lib/utils/port-layout.ts` (extracted shared layout math)
 - Create: `src/lib/utils/connection-geometry.ts`
 - Create: `src/lib/components/ConnectionLayer.svelte`
@@ -849,7 +952,11 @@ Implements upstream #1931. Same-rack connections only (multi-rack is deferred, p
 Move the port-position computation out of `PortIndicators.svelte` into `src/lib/utils/port-layout.ts` so indicators and cable endpoints can never disagree:
 
 ```typescript
-export interface PortPoint { x: number; y: number; index: number }
+export interface PortPoint {
+  x: number;
+  y: number;
+  index: number;
+}
 
 /** Pure layout: where each port circle sits in device-local SVG coords.
  *  Must produce exactly what PortIndicators renders today
@@ -858,7 +965,9 @@ export function computePortLayout(
   portCount: number,
   deviceWidth: number,
   deviceHeight: number,
-): PortPoint[] { /* lifted verbatim from PortIndicators.svelte */ }
+): PortPoint[] {
+  /* lifted verbatim from PortIndicators.svelte */
+}
 ```
 
 Refactor `PortIndicators.svelte` to consume it. Run the full suite — this is a pure refactor; everything stays green.
@@ -868,23 +977,35 @@ Refactor `PortIndicators.svelte` to consume it. Run the full suite — this is a
 ```typescript
 // src/tests/connection-geometry.test.ts
 import { describe, it, expect } from "vitest";
-import { getPortAnchor, buildConnectionPath } from "$lib/utils/connection-geometry";
+import {
+  getPortAnchor,
+  buildConnectionPath,
+} from "$lib/utils/connection-geometry";
 
 describe("connection geometry", () => {
   it("anchors a port at the device position plus port-layout offset", () => {
     // device at U10 in a 12U rack, 1U high: y = (12 - 10 - 1 + 1) * 22 = 44  (RackDevice.svelte:254)
     const anchor = getPortAnchor({
-      rackHeight: 12, positionHuman: 10, uHeight: 22,
-      deviceUHeight: 1, deviceWidth: 186, portIndex: 0, portCount: 4,
+      rackHeight: 12,
+      positionHuman: 10,
+      uHeight: 22,
+      deviceUHeight: 1,
+      deviceWidth: 186,
+      portIndex: 0,
+      portCount: 4,
     });
-    expect(anchor.y).toBeGreaterThan(44);      // inside the device band
+    expect(anchor.y).toBeGreaterThan(44); // inside the device band
     expect(anchor.y).toBeLessThan(44 + 22);
   });
 
   it("builds a cubic bezier path string routed through the side channel", () => {
-    const d = buildConnectionPath({ x: 100, y: 44 }, { x: 100, y: 110 }, { channelX: 210 });
+    const d = buildConnectionPath(
+      { x: 100, y: 44 },
+      { x: 100, y: 110 },
+      { channelX: 210 },
+    );
     expect(d.startsWith("M")).toBe(true);
-    expect(d).toContain("C");                   // cubic bezier, per spike #262
+    expect(d).toContain("C"); // cubic bezier, per spike #262
   });
 
   it("gives distinct channel offsets to overlapping connections", () => {
@@ -909,7 +1030,12 @@ In `Rack.svelte`, after the devices `<g>` (line ~530), same transform group:
 
 ```svelte
 <g transform="translate(0, {RACK_PADDING + RAIL_WIDTH})">
-  <ConnectionLayer {rackId} rackHeight={rack.u_height} uHeight={U_HEIGHT_PX} rackWidth={rackWidth} />
+  <ConnectionLayer
+    {rackId}
+    rackHeight={rack.u_height}
+    uHeight={U_HEIGHT_PX}
+    {rackWidth}
+  />
 </g>
 ```
 
@@ -930,6 +1056,7 @@ git commit -m "feat: render connections as routed SVG paths in the rack view"
 ## Task 8: Click-port-to-port connection creation
 
 **Files:**
+
 - Create: `src/lib/stores/pending-connection.svelte.ts`
 - Modify: `src/lib/components/RackDevice.svelte:831-839` (onPortClick handler body)
 - Modify: `src/lib/components/PortIndicators.svelte` (pending-source highlight ring)
@@ -941,12 +1068,22 @@ git commit -m "feat: render connections as routed SVG paths in the rack view"
 ```typescript
 // src/tests/pending-connection.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
-import { getPendingConnectionStore, resetPendingConnectionStore } from "$lib/stores/pending-connection.svelte";
-import { getConnectionStore, resetConnectionStore } from "$lib/stores/connection.svelte";
+import {
+  getPendingConnectionStore,
+  resetPendingConnectionStore,
+} from "$lib/stores/pending-connection.svelte";
+import {
+  getConnectionStore,
+  resetConnectionStore,
+} from "$lib/stores/connection.svelte";
 import { resetLayoutStore } from "$lib/stores/layout.svelte";
 
 describe("pending connection workflow", () => {
-  beforeEach(() => { resetLayoutStore(); resetConnectionStore(); resetPendingConnectionStore(); });
+  beforeEach(() => {
+    resetLayoutStore();
+    resetConnectionStore();
+    resetPendingConnectionStore();
+  });
 
   it("first port click arms, second click creates the connection", () => {
     const { outPort, inPort1 } = placeTwoAvDevices();
@@ -955,11 +1092,17 @@ describe("pending connection workflow", () => {
     expect(pending.sourcePortId).toBe(outPort.id);
     pending.clickPort(inPort1.id);
     expect(pending.sourcePortId).toBeNull();
-    expect(getConnectionStore().getConnectionsForPort(inPort1.id)).toHaveLength(1);
+    expect(getConnectionStore().getConnectionsForPort(inPort1.id)).toHaveLength(
+      1,
+    );
   });
 
-  it("clicking the armed port again disarms without creating", () => { /* toggle-off */ });
-  it("cancel() disarms", () => { /* Escape path */ });
+  it("clicking the armed port again disarms without creating", () => {
+    /* toggle-off */
+  });
+  it("cancel() disarms", () => {
+    /* Escape path */
+  });
   it("failed validation keeps the source armed and surfaces errors", () => {
     // click armed port, then click an already-connected port: errors exposed
     // on the store (for a toast), source stays armed so the user can retry
@@ -1017,9 +1160,10 @@ git commit -m "feat: click-port-to-port connection creation with cancel and erro
 
 ## Task 9: Signal types on ports, with inference, tooltip display, colors, and mismatch warning
 
-Per the epic's 2026-06-06 review comments (which supersede the older issue bodies): `signal_type` lives on **InterfaceTemplate and PlacedPort** (their P0), the utility is `inferSignalType(type, direction)`, and PortTooltip shows explicit values normally / inferred values as *"inferred: X"* in italics. **One flagged fork deviation:** we also add an optional `signal_type` override on `Connection` so the Connections panel can label a specific cable without editing ports — additive optional field, cheap to rebase away if upstream models it differently.
+Per the epic's 2026-06-06 review comments (which supersede the older issue bodies): `signal_type` lives on **InterfaceTemplate and PlacedPort** (their P0), the utility is `inferSignalType(type, direction)`, and PortTooltip shows explicit values normally / inferred values as _"inferred: X"_ in italics. **One flagged fork deviation:** we also add an optional `signal_type` override on `Connection` so the Connections panel can label a specific cable without editing ports — additive optional field, cheap to rebase away if upstream models it differently.
 
 **Files:**
+
 - Modify: `src/lib/types/index.ts` (SignalType; `signal_type?` on InterfaceTemplate, PlacedPort, Connection)
 - Modify: `src/lib/schemas/index.ts` (SignalTypeSchema; the three optional fields — enum-validated on import per the security comment)
 - Modify: `src/lib/utils/port-utils.ts` (inferSignalType, getConnectionSignalType; instantiatePorts copies template value)
@@ -1034,7 +1178,10 @@ Per the epic's 2026-06-06 review comments (which supersede the older issue bodie
 ```typescript
 // src/tests/signal-type.test.ts
 import { describe, it, expect } from "vitest";
-import { inferSignalType, getConnectionSignalType } from "$lib/utils/port-utils";
+import {
+  inferSignalType,
+  getConnectionSignalType,
+} from "$lib/utils/port-utils";
 import type { Connection, PlacedPort } from "$lib/types";
 
 describe("inferSignalType", () => {
@@ -1062,22 +1209,42 @@ describe("inferSignalType", () => {
 
 describe("getConnectionSignalType precedence", () => {
   const port = (over: Partial<PlacedPort>): PlacedPort =>
-    ({ id: "p", template_name: "1", template_index: 0, type: "trs-1-4", ...over }) as PlacedPort;
+    ({
+      id: "p",
+      template_name: "1",
+      template_index: 0,
+      type: "trs-1-4",
+      ...over,
+    }) as PlacedPort;
   const conn = (over: Partial<Connection>): Connection =>
     ({ id: "c", a_port_id: "a", b_port_id: "b", ...over }) as Connection;
 
   it("connection override wins over everything", () => {
     expect(
-      getConnectionSignalType(conn({ signal_type: "clock-word" }), port({ signal_type: "analog-audio-mic" }), port({})),
+      getConnectionSignalType(
+        conn({ signal_type: "clock-word" }),
+        port({ signal_type: "analog-audio-mic" }),
+        port({}),
+      ),
     ).toBe("clock-word");
   });
   it("explicit port signal beats inference", () => {
     expect(
-      getConnectionSignalType(conn({}), port({ signal_type: "digital-audio-spdif", type: "rca" }), port({ type: "rca" })),
+      getConnectionSignalType(
+        conn({}),
+        port({ signal_type: "digital-audio-spdif", type: "rca" }),
+        port({ type: "rca" }),
+      ),
     ).toBe("digital-audio-spdif");
   });
   it("falls back to inference from the a-side port", () => {
-    expect(getConnectionSignalType(conn({}), port({ type: "adat-optical" }), port({ type: "adat-optical" }))).toBe("digital-audio-adat");
+    expect(
+      getConnectionSignalType(
+        conn({}),
+        port({ type: "adat-optical" }),
+        port({ type: "adat-optical" }),
+      ),
+    ).toBe("digital-audio-adat");
   });
 });
 ```
@@ -1094,13 +1261,20 @@ Run: `busybee -- npm run test:run -- signal-type` → FAIL (exports missing).
 /** What a port/cable carries — independent of connector type (spike #1927, epic decision #8) */
 export type SignalType =
   // Upstream Phase-1 set
-  | "ethernet" | "power-ac"
-  | "analog-audio-mic" | "analog-audio-line" | "analog-audio-speaker"
+  | "ethernet"
+  | "power-ac"
+  | "analog-audio-mic"
+  | "analog-audio-line"
+  | "analog-audio-speaker"
   | "digital-audio-aes3"
-  | "digital-video-hdmi" | "digital-video-sdi"
-  | "control-midi" | "data-usb"
+  | "digital-video-hdmi"
+  | "digital-video-sdi"
+  | "control-midi"
+  | "data-usb"
   // Fork additions (studio needs; additive)
-  | "digital-audio-adat" | "digital-audio-spdif" | "clock-word";
+  | "digital-audio-adat"
+  | "digital-audio-spdif"
+  | "clock-word";
 ```
 
 Add `signal_type?: SignalType;` to `InterfaceTemplate`, `PlacedPort`, and `Connection`. In schemas: `SignalTypeSchema = z.enum([...])` and the optional field on all three object schemas.
@@ -1185,6 +1359,7 @@ git commit -m "feat: add port-level signal types with inference and color-coded 
 The interactive list (design view C): filterable table, hover highlights the cable, inline edit, delete.
 
 **Files:**
+
 - Create: `src/lib/stores/connection-filters.svelte.ts`
 - Create: `src/lib/components/ConnectionsPanel.svelte`
 - Modify: the left sidebar tabs component (find via `rg -ln "Layouts" src/lib/components` — the tab strip rendering Layouts/Racks/Devices) to add a "Connections" tab
@@ -1195,28 +1370,50 @@ The interactive list (design view C): filterable table, hover highlights the cab
 ```typescript
 // src/tests/connection-filters.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
-import { getConnectionFilterStore, resetConnectionFilterStore, filterConnections } from "$lib/stores/connection-filters.svelte";
+import {
+  getConnectionFilterStore,
+  resetConnectionFilterStore,
+  filterConnections,
+} from "$lib/stores/connection-filters.svelte";
 
 describe("connection filters", () => {
   beforeEach(() => resetConnectionFilterStore());
 
   const rows = [
-    { id: "c1", signal_type: "digital-audio-adat", aDeviceName: "Interface", bDeviceName: "Converter", label: "" },
-    { id: "c2", signal_type: "analog-audio-line", aDeviceName: "Preamp", bDeviceName: "Compressor", label: "vox chain" },
+    {
+      id: "c1",
+      signal_type: "digital-audio-adat",
+      aDeviceName: "Interface",
+      bDeviceName: "Converter",
+      label: "",
+    },
+    {
+      id: "c2",
+      signal_type: "analog-audio-line",
+      aDeviceName: "Preamp",
+      bDeviceName: "Compressor",
+      label: "vox chain",
+    },
   ];
 
   it("passes everything with no active filters", () => {
-    expect(filterConnections(rows, getConnectionFilterStore().state)).toHaveLength(2);
+    expect(
+      filterConnections(rows, getConnectionFilterStore().state),
+    ).toHaveLength(2);
   });
   it("filters by signal type", () => {
     const store = getConnectionFilterStore();
     store.toggleSignalType("digital-audio-adat");
-    expect(filterConnections(rows, store.state).map((r) => r.id)).toEqual(["c1"]);
+    expect(filterConnections(rows, store.state).map((r) => r.id)).toEqual([
+      "c1",
+    ]);
   });
   it("filters by free-text across device names and label", () => {
     const store = getConnectionFilterStore();
     store.setSearch("vox");
-    expect(filterConnections(rows, store.state).map((r) => r.id)).toEqual(["c2"]);
+    expect(filterConnections(rows, store.state).map((r) => r.id)).toEqual([
+      "c2",
+    ]);
   });
 });
 ```
@@ -1228,6 +1425,7 @@ describe("connection filters", () => {
 - [ ] **Step 3: Build the panel**
 
 `ConnectionsPanel.svelte`: a `$derived` row model joining connections → ports → devices → racks (device name, port label/name, connector type, effective signal via `getConnectionSignalType()`, rack). Renders: filter controls (signal-type chips, rack select, search input), then a table of rows. Interactions:
+
 - Row hover → set `hoveredConnectionId` on the connection store (ConnectionPath thickens — same mechanism as path hover, now bidirectional).
 - Inline `<select>` for signal and text input for label → `layout.updateConnectionRecorded(id, {...})` — the select writes the `Connection.signal_type` override (the fork-added field from Task 9), leaving port-level values untouched.
 - Delete button per row → `layout.removeConnectionRecorded(id)`.
@@ -1252,6 +1450,7 @@ git commit -m "feat: add filterable Connections panel with inline editing"
 ## Task 11: Apply filters to the cable overlay
 
 **Files:**
+
 - Modify: `src/lib/components/ConnectionLayer.svelte`
 - Test: extend `src/tests/connection-filters.test.ts`
 
@@ -1272,6 +1471,7 @@ git commit -m "feat: apply shared connection filters to the cable overlay"
 ## Task 12: CSV patch-list export
 
 **Files:**
+
 - Create: `src/lib/utils/export/patch-list.ts`
 - Modify: `src/lib/components/ConnectionsPanel.svelte` (Export CSV button)
 - Test: `src/tests/patch-list-export.test.ts`
@@ -1286,11 +1486,20 @@ import { buildPatchListCsv } from "$lib/utils/export/patch-list";
 describe("patch list CSV", () => {
   it("emits header plus one row per connection", () => {
     const csv = buildPatchListCsv([
-      { aDevice: "Preamp", aPort: "Line Out 1", bDevice: "Compressor", bPort: "In 1",
-        type: "trs-1-4", signal: "analog-audio-line", label: "vox chain" },
+      {
+        aDevice: "Preamp",
+        aPort: "Line Out 1",
+        bDevice: "Compressor",
+        bPort: "In 1",
+        type: "trs-1-4",
+        signal: "analog-audio-line",
+        label: "vox chain",
+      },
     ]);
     const lines = csv.trim().split("\n");
-    expect(lines[0]).toBe("From Device,From Port,To Device,To Port,Connector,Signal,Label");
+    expect(lines[0]).toBe(
+      "From Device,From Port,To Device,To Port,Connector,Signal,Label",
+    );
     expect(lines[1]).toContain("Preamp");
   });
 
@@ -1299,10 +1508,17 @@ describe("patch list CSV", () => {
     // CSV export util — rg -l "csv" src/lib/utils — upstream fixed #2200/#2229
     // there; import the same escape helper, do not write a new one).
     const csv = buildPatchListCsv([
-      { aDevice: '=HYPERLINK("x")', aPort: "a,b", bDevice: 'say "hi"', bPort: "1",
-        type: "xlr-3", signal: "analog-audio-line", label: "" },
+      {
+        aDevice: '=HYPERLINK("x")',
+        aPort: "a,b",
+        bDevice: 'say "hi"',
+        bPort: "1",
+        type: "xlr-3",
+        signal: "analog-audio-line",
+        label: "",
+      },
     ]);
-    expect(csv).not.toContain('\n=');   // formula injection neutralized
+    expect(csv).not.toContain("\n="); // formula injection neutralized
   });
 });
 ```
@@ -1348,8 +1564,7 @@ Develop on `feat/pro-audio-connectivity`; upstream PRs are manufactured later by
 
 Run through this when preparing each upstream-bound branch:
 
-1. **Branch name:** `feat/<issue>-desc` (their convention), cut from `upstream/main`:
-   `git checkout -b feat/1930-port-direction upstream/main && git cherry-pick <commits>`
+1. **Branch name:** `feat/<issue>-desc` (their convention), cut from `upstream/main`: `git checkout -b feat/1930-port-direction upstream/main && git cherry-pick <commits>`
 2. **DCO sign-off (required):** every commit gets `Signed-off-by` with a real identity matching the committer — `git rebase --signoff upstream/main` after cherry-picking.
 3. **AI attribution trailer:** upstream requests `Co-Authored-By: Claude ... <noreply@anthropic.com>` on substantially AI-generated commits. Fork commits never carry it (user rule); amend it onto upstream-bound commits at cherry-pick time, per the user's per-PR decision.
 4. **Commit format:** `type: description` (feat/fix/refactor/test/docs/chore); reference the issue number in the PR description and close-tag it.
