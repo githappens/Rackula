@@ -24,14 +24,14 @@
 
 Santa only allows binary execution from `/nix/store/...` and `<project>/build*/...`. **Hard constraint: the user's environment is untouchable** — no PATH edits, no sourced env scripts, no global installs. Everything is scoped inside a project flake dev shell, invoked per command as `nix develop -c <cmd>`.
 
-Why the flake alone doesn't cover esbuild: esbuild's JS wrapper spawns a native binary and refuses any binary whose version doesn't exactly match the installed npm package (0.28.1 today). A nixpkgs-pinned esbuild would break on every npm-side bump. So the flake's shell hook points `ESBUILD_BINARY_PATH` at a copy of the *npm-installed* binary staged under `build/` — always version-matched, executes from an allowed path, and the env var exists only inside the ephemeral shell.
+How esbuild (and every other native binary in `node_modules`) is handled: **Santa matches the resolved realpath of the executed file, not the path used to launch it** (verified empirically on this machine). npm has no supported way to install anywhere but `./node_modules` (`prefix` is global-only; npm issue #13933). So after install we relocate the whole tree under `build-deps/` and leave a symlink: `node_modules -> build-deps/node_modules`. Every binary's realpath then lands under the allowed `build*` path, no per-binary staging. The one catch is install *timing*: esbuild's postinstall execs its binary from the default `./node_modules` path mid-install, before any relocate can run, so `npm ci` must use `--ignore-scripts` (esbuild's binary ships in the `@esbuild/*` tarball and works without the postinstall, which only validates it).
 
 **Files:**
 - Create: `flake.nix` (+ `flake.lock`, generated)
-- Create: `scripts/stage-esbuild.sh`
+- Create: `scripts/relocate-node-modules.sh`
 - Create: `docs/fork/dev-environment.md`
 
-- [ ] **Step 1: Write the flake and the staging script**
+- [ ] **Step 1: Write the flake and the relocate script**
 
 `flake.nix`:
 
@@ -52,12 +52,11 @@ Why the flake alone doesn't cover esbuild: esbuild's JS wrapper spawns a native 
           packages = [ pkgs.nodejs_22 ]; # CI runs Node 22 (CONTRIBUTING.md) — match it
           shellHook = ''
             # Santa allows exec only from /nix/store and <project>/build*/.
-            # esbuild spawns a native binary from node_modules (blocked);
-            # scripts/stage-esbuild.sh copies the npm-installed binary into
-            # build/ so it is always version-matched. Scoped to this shell.
-            export ESBUILD_BINARY_PATH="$PWD/build/esbuild"
-            # Playwright browsers must also execute from an allowed path.
-            export PLAYWRIGHT_BROWSERS_PATH="$PWD/build/pw-browsers"
+            # node_modules is relocated under build-deps/ with a symlink; Santa
+            # matches the resolved realpath, so every native binary (esbuild
+            # included) is allowed. Playwright browsers live OUTSIDE node_modules,
+            # so they still need an explicit allowed path here.
+            export PLAYWRIGHT_BROWSERS_PATH="$PWD/build-deps/pw-browsers"
           '';
         };
       });
@@ -65,24 +64,11 @@ Why the flake alone doesn't cover esbuild: esbuild's JS wrapper spawns a native 
 }
 ```
 
-`scripts/stage-esbuild.sh`:
+`scripts/relocate-node-modules.sh`: move `node_modules` to `build-deps/node_modules`, symlink it back; idempotent if already a symlink; errors loudly if `node_modules` is missing. (See the committed script for the exact body.)
 
 ```bash
-#!/usr/bin/env bash
-# Re-run after every `npm ci`/esbuild bump. Copies the npm-installed esbuild
-# binary into build/ where Santa's allow-list permits execution.
-set -euo pipefail
-cd "$(dirname "$0")/.."
-src="node_modules/@esbuild/darwin-arm64/bin/esbuild"
-[ -f "$src" ] || { echo "stage-esbuild: $src missing — run npm ci first" >&2; exit 1; }
-mkdir -p build
-cp -f "$src" build/esbuild
-echo "stage-esbuild: staged esbuild $(build/esbuild --version) into build/"
-```
-
-```bash
-chmod +x scripts/stage-esbuild.sh
-git add flake.nix scripts/stage-esbuild.sh   # flakes ignore untracked files — add BEFORE nix develop
+chmod +x scripts/relocate-node-modules.sh
+git add flake.nix scripts/relocate-node-modules.sh   # flakes ignore untracked files — add BEFORE nix develop
 ```
 
 - [ ] **Step 2: Verify the shell works and the user's env is untouched**
@@ -93,31 +79,35 @@ node --version                    # in the plain shell: still "command not found
 git add flake.lock
 ```
 
-- [ ] **Step 3: Install deps and stage esbuild**
+- [ ] **Step 3: Install deps and relocate**
 
 ```bash
-busybee -- nix develop -c npm ci
-nix develop -c ./scripts/stage-esbuild.sh   # expect: staged esbuild 0.28.1
-echo "build/" >> .git/info/exclude          # build/ is not in upstream's .gitignore; keep it local
-git status --short                          # only flake.nix, flake.lock, scripts, docs
+busybee -- nix develop -c npm ci --ignore-scripts   # --ignore-scripts: no mid-install esbuild exec
+nix develop -c ./scripts/relocate-node-modules.sh   # node_modules -> build-deps/node_modules
+# node_modules is a symlink; .gitignore's `node_modules/` (dir pattern) won't
+# match it, so exclude the slash-less name plus the build dirs locally:
+printf '%s\n' node_modules build-deps/ build/ >> .git/info/exclude
+git status --short                                  # only flake.nix, flake.lock, scripts, docs
 ```
 
-- [ ] **Step 4: Verify the three critical commands**
+Do NOT run `npm run prepare` (husky): it needs `git` in the shell, and installed hooks would need `node` on PATH, which the plain shell lacks — hooks would break plain-shell commits. Run `lint`/`check` explicitly instead.
+
+- [ ] **Step 4: Verify the critical commands**
 
 ```bash
 busybee -- nix develop -c npm run test:run   # full vitest suite — green baseline
 busybee -- nix develop -c npm run build      # vite build — no Santa popup
-nix develop -c npm run dev                   # dev server on :5173; Ctrl-C after confirming
+nix develop -c npm run dev                   # dev server on :5173; confirm HTTP 200, then stop
 ```
 
-If anything triggers a Santa popup, note which binary path it tried to execute and redirect it the same way (env knob or staged copy into `build/` — that's the generic pattern). Rollup's `@rollup/rollup-darwin-arm64` is a `.node` module loaded in-process, not executed — expected to work as-is.
+If anything triggers a Santa popup, find the realpath it tried to execute and get it under `build*` (already covered for anything in the relocated `node_modules`; otherwise point the tool's cache/out-dir knob at `build-deps/`). Rollup's `@rollup/rollup-darwin-arm64` is a `.node` module loaded in-process, not executed — works as-is.
 
 - [ ] **Step 5: Playwright browsers**
 
-Preferred (pure nix, zero downloads): nixpkgs' `playwright-driver.browsers` — browsers execute from `/nix/store`. Only valid if the driver version matches npm's `@playwright/test` (1.61.x):
+Preferred (pure nix, zero downloads): nixpkgs' `playwright-driver.browsers` — browsers execute from `/nix/store`. Only valid if the driver version matches npm's `@playwright/test`:
 
 ```bash
-nix eval --raw nixpkgs#playwright-driver.version
+nix eval --raw nixpkgs#playwright-driver.version   # currently 1.60.0 — does NOT match npm 1.61.1
 ```
 
 If it matches (same major.minor), switch the flake's shellHook to:
@@ -127,7 +117,7 @@ export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
 export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 ```
 
-If it does NOT match, keep the `build/pw-browsers` export and download into it instead:
+If it does NOT match (the current case), keep the `build-deps/pw-browsers` export and download into it:
 
 ```bash
 nix develop -c npx playwright install chromium
@@ -141,13 +131,13 @@ busybee -- nix develop -c npm run test:e2e:smoke   # expect PASS
 
 - [ ] **Step 6: Document**
 
-Write `docs/fork/dev-environment.md`: the `nix develop -c` convention, why esbuild is staged (exact-version rule), the re-stage-after-npm-ci rule, which Playwright option is active, and the "watch the Santa popup, redirect into build/" debugging pattern. Half a page.
+Write `docs/fork/dev-environment.md`: the `nix develop -c` convention, the two-step install (`--ignore-scripts` + relocate) and why, the Santa-matches-realpath finding, the re-relocate-after-npm-ci rule, the Playwright choice, the no-husky decision, the gitignore-symlink footgun, and the "find the realpath, get it under build*" debugging pattern. Half a page.
 
 - [ ] **Step 7: Create the feature branch and commit**
 
 ```bash
 git checkout -b feat/pro-audio-connectivity
-git add flake.nix flake.lock scripts/stage-esbuild.sh docs/fork/dev-environment.md
+git add flake.nix flake.lock scripts/relocate-node-modules.sh docs/fork/dev-environment.md
 git commit -m "chore: add nix flake dev shell for Santa-lockdown toolchain"
 ```
 
