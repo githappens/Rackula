@@ -71,9 +71,7 @@
       (signalType ? signalColour(signalType) : "var(--colour-port-default)"),
   );
 
-  const d = $derived(
-    buildConnectionPath(aAnchor, bAnchor, { channelX, lane }),
-  );
+  const d = $derived(buildConnectionPath(aAnchor, bAnchor, { channelX, lane }));
 
   // Direction of signal flow along the path, expressed as +1 (a -> b),
   // -1 (b -> a), or 0 (no determinable direction: draw a plain line).
@@ -118,7 +116,12 @@
   onmouseenter={handleEnter}
   onmouseleave={handleLeave}
 >
-  <path {d} fill="none" {stroke} stroke-width={strokeWidth} stroke-linecap="round"
+  <path
+    {d}
+    fill="none"
+    {stroke}
+    stroke-width={strokeWidth}
+    stroke-linecap="round"
     >{#if connection.label}<title>{connection.label}</title>{/if}</path
   >
 
@@ -129,7 +132,8 @@
       class="connection-arrow"
       d="M -4 -3 L 4 0 L -4 3 Z"
       fill={stroke}
-      transform="translate({midpoint.point.x}, {midpoint.point.y}) rotate({arrowAngle})"
+      transform="translate({midpoint.point.x}, {midpoint.point
+        .y}) rotate({arrowAngle})"
     />
   {/if}
 </g>

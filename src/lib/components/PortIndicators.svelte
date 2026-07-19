@@ -258,14 +258,18 @@
         {#if iface.direction === "input"}
           <path
             class="port-direction-indicator"
-            d="M {x - 2} {y - PORT_RADIUS - 4} L {x} {y - PORT_RADIUS - 2} L {x + 2} {y - PORT_RADIUS - 4}"
+            d="M {x - 2} {y - PORT_RADIUS - 4} L {x} {y -
+              PORT_RADIUS -
+              2} L {x + 2} {y - PORT_RADIUS - 4}"
             fill="none"
             stroke-width="1"
           />
         {:else if iface.direction === "output"}
           <path
             class="port-direction-indicator"
-            d="M {x - 2} {y - PORT_RADIUS - 2} L {x} {y - PORT_RADIUS - 4} L {x + 2} {y - PORT_RADIUS - 2}"
+            d="M {x - 2} {y - PORT_RADIUS - 2} L {x} {y -
+              PORT_RADIUS -
+              4} L {x + 2} {y - PORT_RADIUS - 2}"
             fill="none"
             stroke-width="1"
           />

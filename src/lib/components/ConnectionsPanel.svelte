@@ -200,7 +200,8 @@
               </td>
             {:else}
               <td class="missing" colspan="4">
-                Missing port: connection references a port that no longer exists.
+                Missing port: connection references a port that no longer
+                exists.
               </td>
             {/if}
             <td class="actions">

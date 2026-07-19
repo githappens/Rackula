@@ -21,7 +21,10 @@ describe("inferDirection", () => {
 
 describe("instantiatePorts direction", () => {
   const deviceType = {
-    slug: "test-pre", model: "Test Pre", u_height: 1, category: "av-media",
+    slug: "test-pre",
+    model: "Test Pre",
+    u_height: 1,
+    category: "av-media",
     colour: "#000000",
     interfaces: [
       { name: "Mic In", type: "xlr-3", direction: "input" },
@@ -39,7 +42,10 @@ describe("instantiatePorts direction", () => {
 describe("backward compatibility", () => {
   it("PlacedPort without direction still validates", () => {
     const result = PlacedPortSchema.safeParse({
-      id: "p1", template_name: "1", template_index: 0, type: "1000base-t",
+      id: "p1",
+      template_name: "1",
+      template_index: 0,
+      type: "1000base-t",
     });
     expect(result.success).toBe(true);
   });

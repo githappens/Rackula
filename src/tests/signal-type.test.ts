@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { inferSignalType, getConnectionSignalType } from "$lib/utils/port-utils";
+import {
+  inferSignalType,
+  getConnectionSignalType,
+} from "$lib/utils/port-utils";
 import type { Connection, PlacedPort } from "$lib/types";
 import { getLayoutStore, resetLayoutStore } from "$lib/stores/layout.svelte";
 import {
@@ -88,7 +91,9 @@ describe("connection store signal-mismatch warning", () => {
     // adat-optical infers digital-audio-adat; bnc infers clock-word.
     const adatDev = createTestDeviceType({
       slug: "adat-dev",
-      interfaces: [{ name: "ADAT Out", type: "adat-optical", direction: "output" }],
+      interfaces: [
+        { name: "ADAT Out", type: "adat-optical", direction: "output" },
+      ],
     });
     const bncDev = createTestDeviceType({
       slug: "bnc-dev",
@@ -112,9 +117,7 @@ describe("connection store signal-mismatch warning", () => {
 
     expect("connection" in result).toBe(true);
     if ("connection" in result) {
-      expect(
-        result.warnings.some((w) => /signal/i.test(w)),
-      ).toBe(true);
+      expect(result.warnings.some((w) => /signal/i.test(w))).toBe(true);
     }
   });
 });

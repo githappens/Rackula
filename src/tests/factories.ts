@@ -627,7 +627,10 @@ export function placeTwoOutputs(): { outA: PlacedPort; outB: PlacedPort } {
  * Place one AV output port and one network port, for the cross-category
  * warning case.
  */
-export function placeAvAndNetwork(): { avPort: PlacedPort; netPort: PlacedPort } {
+export function placeAvAndNetwork(): {
+  avPort: PlacedPort;
+  netPort: PlacedPort;
+} {
   const layout = getLayoutStore();
   const rack = layout.addRack("Test Rack", 42);
   if (!rack) throw new Error("placeAvAndNetwork: addRack failed");

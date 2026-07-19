@@ -74,7 +74,13 @@
     <div class="port-tooltip-name">{port.label ?? port.name}</div>
     <div class="port-tooltip-type">{getTypeLabel(port.type)}</div>
     {#if port.direction}
-      <div class="port-tooltip-type">{port.direction === "input" ? "Input" : port.direction === "output" ? "Output" : "Bidirectional"}</div>
+      <div class="port-tooltip-type">
+        {port.direction === "input"
+          ? "Input"
+          : port.direction === "output"
+            ? "Output"
+            : "Bidirectional"}
+      </div>
     {/if}
     {#if explicitSignal}
       <div class="port-tooltip-type">{getSignalLabel(explicitSignal)}</div>

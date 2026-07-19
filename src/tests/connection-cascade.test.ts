@@ -68,9 +68,7 @@ function placeCarrierWithChild(): {
   )!;
 
   store.placeInContainer(rackId, childType.slug, carrier.id, "slot-left", 0);
-  const child = store.rack!.devices.find(
-    (d) => d.container_id === carrier.id,
-  )!;
+  const child = store.rack!.devices.find((d) => d.container_id === carrier.id)!;
 
   const carrierOutPort = carrier.ports!.find(
     (p) => p.template_name === "Carrier Out",

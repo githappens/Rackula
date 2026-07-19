@@ -27,8 +27,7 @@ import { getCommandStoreAdapter } from "./command-adapters";
  * or the validation errors that blocked creation.
  */
 export type AddConnectionResult =
-  | { connection: Connection; warnings: string[] }
-  | { errors: string[] };
+  { connection: Connection; warnings: string[] } | { errors: string[] };
 
 /**
  * Add a connection with undo/redo support. Validates first; on any error the

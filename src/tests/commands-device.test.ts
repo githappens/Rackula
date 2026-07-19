@@ -237,7 +237,6 @@ describe("Device Commands", () => {
         expect.objectContaining({ position: toInternalUnits(15) }),
       );
     });
-
   });
 
   describe("batch auto-import + placement", () => {

@@ -225,11 +225,23 @@ describe("visibleConnectionIdsForRack", () => {
   };
 
   // c1: rack-A, ADAT (both ports in rack-A)
-  const c1: Connection = { id: "c1", a_port_id: "port-a1", b_port_id: "port-a2" };
+  const c1: Connection = {
+    id: "c1",
+    a_port_id: "port-a1",
+    b_port_id: "port-a2",
+  };
   // c2: rack-B, analog-audio-line (both ports in rack-B)
-  const c2: Connection = { id: "c2", a_port_id: "port-b1", b_port_id: "port-b2" };
+  const c2: Connection = {
+    id: "c2",
+    a_port_id: "port-b1",
+    b_port_id: "port-b2",
+  };
   // c3: rack-A but b-port doesn't exist in any rack -> unresolved
-  const c3: Connection = { id: "c3", a_port_id: "port-a3", b_port_id: "missing-port" };
+  const c3: Connection = {
+    id: "c3",
+    a_port_id: "port-a3",
+    b_port_id: "missing-port",
+  };
 
   const racks = [rackA, rackB];
   const deviceTypes = [deviceTypeA, deviceTypeB];
@@ -239,13 +251,25 @@ describe("visibleConnectionIdsForRack", () => {
 
   it("returns all resolvable connections for a rack when no filters are active", () => {
     const store = getConnectionFilterStore();
-    const ids = visibleConnectionIdsForRack(connections, racks, deviceTypes, store.state, "rack-A");
+    const ids = visibleConnectionIdsForRack(
+      connections,
+      racks,
+      deviceTypes,
+      store.state,
+      "rack-A",
+    );
     expect(ids.has("c1")).toBe(true);
   });
 
   it("excludes connections from other racks", () => {
     const store = getConnectionFilterStore();
-    const ids = visibleConnectionIdsForRack(connections, racks, deviceTypes, store.state, "rack-A");
+    const ids = visibleConnectionIdsForRack(
+      connections,
+      racks,
+      deviceTypes,
+      store.state,
+      "rack-A",
+    );
     expect(ids.has("c2")).toBe(false);
   });
 
@@ -253,21 +277,39 @@ describe("visibleConnectionIdsForRack", () => {
     const store = getConnectionFilterStore();
     store.toggleSignalType("analog-audio-line");
     // rack-A only has ADAT connections; analog filter should exclude c1
-    const ids = visibleConnectionIdsForRack(connections, racks, deviceTypes, store.state, "rack-A");
+    const ids = visibleConnectionIdsForRack(
+      connections,
+      racks,
+      deviceTypes,
+      store.state,
+      "rack-A",
+    );
     expect(ids.has("c1")).toBe(false);
   });
 
   it("still includes c1 when the matching signal-type filter is active", () => {
     const store = getConnectionFilterStore();
     store.toggleSignalType("digital-audio-adat");
-    const ids = visibleConnectionIdsForRack(connections, racks, deviceTypes, store.state, "rack-A");
+    const ids = visibleConnectionIdsForRack(
+      connections,
+      racks,
+      deviceTypes,
+      store.state,
+      "rack-A",
+    );
     expect(ids.has("c1")).toBe(true);
   });
 
   it("always includes an unresolved connection regardless of filter (never hidden)", () => {
     const store = getConnectionFilterStore();
     store.toggleSignalType("analog-audio-line");
-    const ids = visibleConnectionIdsForRack(connections, racks, deviceTypes, store.state, "rack-A");
+    const ids = visibleConnectionIdsForRack(
+      connections,
+      racks,
+      deviceTypes,
+      store.state,
+      "rack-A",
+    );
     // c3 is unresolved (missing-port doesn't exist) - must still be visible
     expect(ids.has("c3")).toBe(true);
   });

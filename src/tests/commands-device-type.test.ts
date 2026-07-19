@@ -310,6 +310,5 @@ describe("Device Type Commands", () => {
         expect.objectContaining({ position: toInternalUnits(5) }),
       );
     });
-
   });
 });
