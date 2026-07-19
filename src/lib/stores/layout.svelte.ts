@@ -17,7 +17,10 @@ import type {
   DeviceFace,
   RackView,
   DisplayMode,
+  Connection,
 } from "$lib/types";
+import type { CreateConnectionInput } from "./connection.svelte";
+import type { AddConnectionResult } from "./layout/recorded-connection-actions";
 import { MAX_RACKS } from "$lib/types/constants";
 import { createLayout } from "$lib/utils/serialization";
 import type { CreateDeviceTypeInput } from "$lib/stores/layout-helpers";
@@ -91,7 +94,15 @@ import {
   replaceRackRaw as replaceRackRawImpl,
   clearRackDevicesRaw as clearRackDevicesRawImpl,
   restoreRackDevicesRaw as restoreRackDevicesRawImpl,
+  addConnectionRaw as addConnectionRawImpl,
+  removeConnectionRaw as removeConnectionRawImpl,
+  updateConnectionRaw as updateConnectionRawImpl,
 } from "./layout/mutators";
+import {
+  addConnectionRecorded as addConnectionRecordedImpl,
+  updateConnectionRecorded as updateConnectionRecordedImpl,
+  removeConnectionRecorded as removeConnectionRecordedImpl,
+} from "./layout/recorded-connection-actions";
 import {
   addDeviceTypeRecorded as addDeviceTypeRecordedImpl,
   updateDeviceTypeRecorded as updateDeviceTypeRecordedImpl,
@@ -371,6 +382,9 @@ export function createLayoutStore(
     replaceRackRaw,
     clearRackDevicesRaw,
     restoreRackDevicesRaw,
+    addConnectionRaw,
+    removeConnectionRaw,
+    updateConnectionRaw,
 
     // Utility
     getUsedDeviceTypeSlugs,
@@ -392,6 +406,9 @@ export function createLayoutStore(
     updateDeviceColourRecorded,
     updateRackRecorded,
     clearRackRecorded,
+    addConnectionRecorded,
+    updateConnectionRecorded,
+    removeConnectionRecorded,
 
     // Undo/Redo
     undo,
@@ -1042,6 +1059,42 @@ export function createLayoutStore(
 
   function restoreRackDevicesRaw(devices: PlacedDevice[]): void {
     restoreRackDevicesRawImpl(stateAccess, devices);
+  }
+
+  // =============================================================================
+  // Connection Raw + Recorded Actions — delegated to layout modules
+  // =============================================================================
+
+  function addConnectionRaw(connection: Connection): void {
+    addConnectionRawImpl(stateAccess, connection);
+  }
+
+  function removeConnectionRaw(id: string): Connection | undefined {
+    return removeConnectionRawImpl(stateAccess, id);
+  }
+
+  function updateConnectionRaw(
+    id: string,
+    updates: Partial<Pick<Connection, "label" | "color">>,
+  ): void {
+    updateConnectionRawImpl(stateAccess, id, updates);
+  }
+
+  function addConnectionRecorded(
+    input: CreateConnectionInput,
+  ): AddConnectionResult {
+    return addConnectionRecordedImpl(stateAccess, input);
+  }
+
+  function updateConnectionRecorded(
+    id: string,
+    updates: Partial<Pick<Connection, "label" | "color">>,
+  ): boolean {
+    return updateConnectionRecordedImpl(stateAccess, id, updates);
+  }
+
+  function removeConnectionRecorded(id: string): Connection | undefined {
+    return removeConnectionRecordedImpl(stateAccess, id);
   }
 
   // =============================================================================

@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=https://count.racku.la/schemas/rackula-layout.schema.json
+# Pro-audio layout: AV devices with directional ports, a port-to-port
+# connections array, and a legacy top-level `cables` key from the pre-#369
+# Cable model. Proves the current loader accepts current-format connections
+# and does not silently drop prior-release cables data.
+metadata:
+  id: 3d2f1a9c-7b6e-4c8d-9a1b-2e3f4a5b6c7d
+  name: Pro Audio Rack
+  schema_version: "1.0"
+version: "1.0"
+name: Pro Audio Rack
+racks:
+  - id: rack-audio
+    name: Audio Rack
+    height: 12
+    width: 19
+    desc_units: false
+    show_rear: true
+    form_factor: 4-post-cabinet
+    starting_unit: 1
+    position: 0
+    devices:
+      - id: dev-preamp
+        device_type: mic-preamp-2ch
+        position: 6
+        face: front
+        ports:
+          - id: port-pre-out-l
+            template_name: Out L
+            template_index: 0
+            type: xlr-3
+            direction: output
+          - id: port-pre-out-r
+            template_name: Out R
+            template_index: 1
+            type: xlr-3
+            direction: output
+      - id: dev-comp
+        device_type: compressor-1u
+        position: 12
+        face: front
+        ports:
+          - id: port-comp-in-1
+            template_name: In 1
+            template_index: 0
+            type: trs-1-4
+            direction: input
+          - id: port-comp-in-2
+            template_name: In 2
+            template_index: 1
+            type: trs-1-4
+            direction: input
+device_types:
+  - slug: mic-preamp-2ch
+    manufacturer: Acme Audio
+    model: MicPre 2CH
+    u_height: 1
+    colour: "#B5651D"
+    category: av-media
+    interfaces:
+      - name: Out L
+        type: xlr-3
+        direction: output
+      - name: Out R
+        type: xlr-3
+        direction: output
+  - slug: compressor-1u
+    manufacturer: Acme Audio
+    model: Comp 1U
+    u_height: 1
+    colour: "#7B6BA8"
+    category: av-media
+    interfaces:
+      - name: In 1
+        type: trs-1-4
+        direction: input
+      - name: In 2
+        type: trs-1-4
+        direction: input
+settings:
+  display_mode: label
+  show_labels_on_images: false
+connections:
+  - id: conn-l
+    a_port_id: port-pre-out-l
+    b_port_id: port-comp-in-1
+    label: Left
+  - id: conn-r
+    a_port_id: port-pre-out-r
+    b_port_id: port-comp-in-2
+    label: Right
+cables:
+  - id: legacy-cable-1
+    a_device_id: dev-preamp
+    a_interface: Out L
+    b_device_id: dev-comp
+    b_interface: In 1
+    type: xlr

@@ -16,6 +16,7 @@ import type {
   DeviceTypeCommandStore,
   DeviceCommandStore,
   RackCommandStore,
+  ConnectionCommandStore,
 } from "../commands";
 import type { LayoutStateAccess } from "./types";
 import { getTargetRack } from "./rack-actions";
@@ -39,6 +40,9 @@ import {
   replaceRackRaw,
   clearRackDevicesRaw,
   restoreRackDevicesRaw,
+  addConnectionRaw,
+  removeConnectionRaw,
+  updateConnectionRaw,
 } from "./mutators";
 
 // =============================================================================
@@ -83,7 +87,10 @@ function resolveAdapterRackId(
  */
 export function getCommandStoreAdapter(
   ctx: LayoutStateAccess,
-): DeviceTypeCommandStore & DeviceCommandStore & RackCommandStore {
+): DeviceTypeCommandStore &
+  DeviceCommandStore &
+  RackCommandStore &
+  ConnectionCommandStore {
   return {
     // DeviceTypeCommandStore
     addDeviceTypeRaw: (deviceType) => addDeviceTypeRaw(ctx, deviceType),
@@ -149,5 +156,10 @@ export function getCommandStoreAdapter(
       if (!firstRack) throw new Error("No rack available in RackCommandStore");
       return firstRack;
     },
+
+    // ConnectionCommandStore
+    addConnectionRaw: (connection) => addConnectionRaw(ctx, connection),
+    removeConnectionRaw: (id) => removeConnectionRaw(ctx, id),
+    updateConnectionRaw: (id, updates) => updateConnectionRaw(ctx, id, updates),
   };
 }

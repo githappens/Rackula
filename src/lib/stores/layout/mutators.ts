@@ -10,7 +10,13 @@
  * unless a rackId is explicitly provided.
  */
 
-import type { DeviceFace, DeviceType, PlacedDevice, Rack } from "$lib/types";
+import type {
+  Connection,
+  DeviceFace,
+  DeviceType,
+  PlacedDevice,
+  Rack,
+} from "$lib/types";
 import { layoutDebug } from "$lib/utils/debug";
 import { generateId } from "$lib/utils/device";
 import { sanitizeFilename } from "$lib/utils/imageUpload";
@@ -569,6 +575,69 @@ export function restoreRackDevicesRaw(
     ...rack,
     devices: [...safeDevices],
   }));
+}
+
+// =============================================================================
+// Connection Raw Mutators
+// =============================================================================
+
+/**
+ * Add a connection directly (raw). Appends to layout.connections.
+ * @param ctx - Layout state access
+ * @param connection - Connection to add
+ */
+export function addConnectionRaw(
+  ctx: LayoutStateAccess,
+  connection: Connection,
+): void {
+  const layout = ctx.getLayout();
+  ctx.setLayout({
+    ...layout,
+    connections: [...(layout.connections ?? []), connection],
+  });
+}
+
+/**
+ * Remove a connection by id directly (raw).
+ * @param ctx - Layout state access
+ * @param id - Connection id to remove
+ * @returns The removed connection, or undefined if no connection matched
+ */
+export function removeConnectionRaw(
+  ctx: LayoutStateAccess,
+  id: string,
+): Connection | undefined {
+  const layout = ctx.getLayout();
+  const connections = layout.connections ?? [];
+  const removed = connections.find((c) => c.id === id);
+  if (!removed) return undefined;
+
+  ctx.setLayout({
+    ...layout,
+    connections: connections.filter((c) => c.id !== id),
+  });
+  return removed;
+}
+
+/**
+ * Update a connection's mutable fields (label/color) directly (raw).
+ * @param ctx - Layout state access
+ * @param id - Connection id to update
+ * @param updates - Fields to merge onto the connection
+ */
+export function updateConnectionRaw(
+  ctx: LayoutStateAccess,
+  id: string,
+  updates: Partial<Pick<Connection, "label" | "color">>,
+): void {
+  const layout = ctx.getLayout();
+  const connections = layout.connections ?? [];
+  ctx.setLayout({
+    ...layout,
+    connections: connections.map((c) =>
+      c.id === id ? { ...c, ...updates } : c,
+    ),
+  });
 }
 
 // =============================================================================
