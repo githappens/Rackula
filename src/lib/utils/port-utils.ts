@@ -6,14 +6,30 @@
 import type { DeviceType, PlacedPort } from "$lib/types";
 import { generateId } from "$lib/utils/device";
 
-export type PortCategory = "network" | "power" | "console";
+export type PortCategory = "network" | "power" | "console" | "av";
+
+export const AV_INTERFACE_TYPES: ReadonlySet<string> = new Set([
+  "xlr-3",
+  "trs-1-4",
+  "ts-1-4",
+  "rca",
+  "adat-optical",
+  "midi-din",
+  "bnc",
+  "db25-audio",
+]);
 
 /**
- * Categorize an interface type string into network, power, or console.
+ * Categorize an interface type string into network, power, console, or av.
  * Uses string matching so it handles future types (e.g. power-inlet-*) even
- * before they are added to the InterfaceType enum.
+ * before they are added to the InterfaceType enum. AV types are the exception:
+ * they use an explicit set lookup against AV_INTERFACE_TYPES, so that set must
+ * be extended whenever new AV slugs are added to the schema.
  */
 export function getPortCategory(type: string): PortCategory {
+  if (AV_INTERFACE_TYPES.has(type)) {
+    return "av";
+  }
   if (
     type === "console" ||
     type.includes("usb") ||

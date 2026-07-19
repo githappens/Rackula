@@ -265,6 +265,7 @@
   --colour-port-sfp28: var(--amber-500);
   --colour-port-qsfpp: var(--red-500);
   --colour-port-qsfp28: var(--pink-500);
+  --colour-port-av: var(--dracula-cyan);
   --colour-port-console: var(--neutral-400);
   --colour-port-power: var(--dracula-orange);
   --colour-port-default: var(--neutral-500);
