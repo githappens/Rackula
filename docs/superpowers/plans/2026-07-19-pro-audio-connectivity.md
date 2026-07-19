@@ -13,6 +13,9 @@
 - TDD per upstream CLAUDE.md: test behavior, not rendering. ESLint blocks `querySelector()`, `toHaveClass()`, `toHaveLength(<literal>)`, hardcoded color assertions.
 - Heavy commands (`npm ci`, `npm run test:run`, `npm run build`, e2e) go through `busybee -- <cmd>`. `npm run dev` is interactive — no busybee.
 - Security (epic comment, 2026-06-06): any new user-provided string field gets `z.string().max(256)`; new enum fields (direction, signal type) are Zod-validated on import — no arbitrary strings from layout files.
+- All user-facing strings (tooltips, warnings, panel copy, empty states) follow upstream's writing style: no em/en dashes, no smart quotes, no emoji, succinct. New UI controls (selects, tabs, tooltips) use the existing bits-ui wrappers in `src/lib/components/ui/`.
+- Never touch `CHANGELOG.md` — it belongs to upstream's `/release` tooling.
+- Schema changes ship with an upgrade-corpus fixture (`src/tests/fixtures/upgrade-corpus/`) proving prior-release layouts still load — upstream treats this as a first-class requirement.
 - **All toolchain commands run inside the project flake's dev shell and nowhere else.** Every `npm ...` / `npx ...` command in this plan is shorthand for `nix develop -c npm ...` (heavy ones: `busybee -- nix develop -c npm ...`). Never modify the user's PATH, never source env scripts into their shell, never install anything globally — the dev shell is ephemeral per command.
 
 ---
@@ -46,7 +49,7 @@ Why the flake alone doesn't cover esbuild: esbuild's JS wrapper spawns a native 
     in {
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {
-          packages = [ pkgs.nodejs_24 ];
+          packages = [ pkgs.nodejs_22 ]; # CI runs Node 22 (CONTRIBUTING.md) — match it
           shellHook = ''
             # Santa allows exec only from /nix/store and <project>/build*/.
             # esbuild spawns a native binary from node_modules (blocked);
@@ -85,7 +88,7 @@ git add flake.nix scripts/stage-esbuild.sh   # flakes ignore untracked files —
 - [ ] **Step 2: Verify the shell works and the user's env is untouched**
 
 ```bash
-nix develop -c node --version    # expect v24.x from /nix/store (first run fetches nixpkgs — slow once)
+nix develop -c node --version    # expect v22.x from /nix/store (first run fetches nixpkgs — slow once)
 node --version                    # in the plain shell: still "command not found" — the invariant we keep
 git add flake.lock
 ```
@@ -770,7 +773,11 @@ export function createAddConnectionCommand(connection: Connection, store: Connec
 
 Run: `busybee -- npm run test:run -- connection-store` → PASS. Then full suite + `npm run check`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Add an upgrade-corpus fixture**
+
+Per upstream's upgrade-safety harness (`docs/superpowers/specs/2026-06-17-upgrade-safety-harness-design.md`): add a fixture layout to `src/tests/fixtures/upgrade-corpus/` containing placed devices with AV ports (direction set), a `connections` array, and a legacy `cables` key — proving current code loads both current and prior-release data. Follow the naming/registration pattern of the existing fixtures in that directory (e.g. the v26.7.0 fixture added recently). Extend this same fixture in Task 9 when `signal_type` lands.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add -A src/lib src/tests
@@ -1346,7 +1353,22 @@ Develop on `feat/pro-audio-connectivity`; upstream PRs are manufactured later by
 - **Feature commits** touch only `src/`, `src/tests/`, `e2e/`. One task = one commit (as the task steps already enforce) so each maps to one upstream issue-sized PR.
 - **Upstream-only when engaged, in dependency order:** #1930 first (no deps, cheapest receptivity test), then #369, then #1931/#639. Never PR a task whose dependencies haven't landed upstream.
 - **Stays fork-only:** Santa toolchain, spec/plan docs, `Connection.signal_type` override, the warn-only mismatch check (upstream deferred to P3), ConnectionsPanel + filters + CSV (not in their M5).
-- **Trailers:** fork commits carry no AI co-author trailer (user rule). If a commit is cherry-picked for an upstream PR, amend the trailer on at that point, per the user's per-PR decision — upstream's CONTRIBUTING requests it.
+
+### Upstream PR compliance checklist (from CONTRIBUTING.md + upstream CLAUDE.md)
+
+Run through this when preparing each upstream-bound branch:
+
+1. **Branch name:** `feat/<issue>-desc` (their convention), cut from `upstream/main`:
+   `git checkout -b feat/1930-port-direction upstream/main && git cherry-pick <commits>`
+2. **DCO sign-off (required):** every commit gets `Signed-off-by` with a real identity matching the committer — `git rebase --signoff upstream/main` after cherry-picking.
+3. **AI attribution trailer:** upstream requests `Co-Authored-By: Claude ... <noreply@anthropic.com>` on substantially AI-generated commits. Fork commits never carry it (user rule); amend it onto upstream-bound commits at cherry-pick time, per the user's per-PR decision.
+4. **Commit format:** `type: description` (feat/fix/refactor/test/docs/chore); reference the issue number in the PR description and close-tag it.
+5. **No CHANGELOG.md changes** — release tooling owns it.
+6. **No new docs files** in upstream PRs (their file-ops rule); PRs contain only `src/`, `src/tests/`, `e2e/`.
+7. **Prettier parity:** format with the `npm ci`-installed Prettier (the nix-shell flow guarantees this); a drifted Prettier triggers their `rackula-format-bot` to force-push reformats and re-run CI.
+8. **Expect CodeRabbit:** it reviews every PR before the human does; address its comments in follow-up commits. Their own rule is "never merge before CodeRabbit approves" — assume the maintainer holds outside PRs to the same bar.
+9. **Upgrade corpus:** schema-touching PRs include a fixture in `src/tests/fixtures/upgrade-corpus/` proving prior-release data loads.
+10. **Style sweep:** user-facing strings follow their writing rules (no em/en dashes, smart quotes, emoji; succinct); tests obey their ESLint-enforced policy (no DOM queries, no literal lengths, no color assertions).
 
 ## Explicitly deferred (do not build)
 
